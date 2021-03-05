@@ -1,0 +1,226 @@
+---
+title: "Assignment 6: "
+author: "Marton Kovacs"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Introduction
+
+In this lab assignment you will need to explore the factor structure of the Animal Rights Scale, a scale containing 28 items to measure attitudes towards animal experimentation and animal rights. Imagine that you are a researcher who is interested in the underlying factors that govern attitudes towards animal rights and the use of animals for different purposes. You have gathered data using the Animal Rights Scale (ARS) from 154 individuals in an online survey. Your goal is to explore the underlying factors.
+
+# Dataset
+
+You can load the dataset from the 'data/' folder.
+
+The dataset includes the responses of 154 individuals on the following variables:
+
+__ar1-ar28__ contain the data from the 28 items of the ARS. Participants had to rate their agreement with each statement separately on a 1-5 Likert scale with the following anchors: 1 - strongly disagree, 2 – disagree, 3 - no opinion, 4 – agree, 5 - strongly agree.
+
+The questions in the ARS were the following:
+
+  * __ar 1.__ Humans have no right to displace wild animals by converting wilderness areas into farmlands, cities, and other things designed for people.
+  * __ar 2.__ Animal research cannot be justified and should be stopped.
+  * __ar 3.__ It is morally wrong to drink milk and eat eggs.
+  * __ar 4.__ A human has no right to use a horse as a means of transportation (riding) or entertainment (racing).
+  * __ar 5.__ It is wrong to wear leather jackets and pants.
+  * __ar 6.__ Most medical research done on animals is unnecessary and invalid.
+  * __ar 7.__ I have seriously considered becoming a vegetarian in an effort to save animal lives.
+  * __ar 8.__ Pet owners are responsible for preventing their pets from killing other animals, such as cats killing mice or snakes eating live mice.
+  * __ar 9.__ We need more regulations governing the use of animals in research.
+  * __ar 10.__ It is morally wrong to eat beef and other "red" meat.
+  * __ar 11.__ Insect pests (mosquitoes, cockroaches, flies, etc.) should be safely removed from the house rather than killed.
+  * __ar 12.__ Animals should be granted the same rights as humans.
+  * __ar 13.__ It is wrong to wear leather belts and shoes.
+  * __ar 14.__ I would rather see humans die or suffer from disease than to see animals used in research.
+  * __ar 15.__ Having extended basic rights to minorities and women, it is now time to extend them also to animals.
+  * __ar 16.__ God put animals on Earth for man to use.
+  * __ar 17.__ There are plenty of viable alternatives to the use of animals in biomedical and behavioral research.
+  * __ar 18.__ Research on animals has little or no bearing on problems confronting people.
+  * __ar 19.__ New surgical procedures and experimental drugs should be tested on animals before they are used on people.
+  * __ar 20.__ I am very concerned about pain and suffering in animals.
+  * __ar 21.__ Since many important questions cannot be answered by doing experiments on people, we are left with no alternatives but to do animal research.
+  * __ar 22.__ It is a violation of an animal's rights to be held captive as a pet by a human.
+  * __ar 23.__ It is wrong to wear animal fur (such as mink coats).
+  * __ar 24.__ It is appropriate for humans to kill animals that destroy human property, for example, rats, mice, and pigeons.
+  * __ar 25.__ Most cosmetics research done on animals is unnecessary and invalid.
+  * __ar 26.__ It is morally wrong to eat chicken and fish.
+  * __ar 27.__ Most psychological research done on animals is unnecessary and invalid.
+  * __ar 28.__ Hunters play an important role in regulating the size of deer populations.
+
+You can get more information about the ARS here: http://core.ecu.edu/psyc/wuenschk/Animals/Anim-Rights-Q.htm
+
+And also here: 
+
+Wuensch, K. L., Jenkins, K. W., & Poteat, G. M. (2002). Misanthropy, idealism, and attitudes towards animals. _Anthrozoös, 15_, 139-149
+
+Sharp, H. W., Wuensch, K. L., Eppler, M. A., & Harju, B. L. (2006, April). Narcissism, empathy, and attitudes towards animals. In _Spring Conference of the North Carolina Psychological Association and North Carolina Psychological Foundation, Charlotte, NC._
+
+A few other questions were also included in the questionnaire:
+
+__sex:__ The self reported sex of the participant. This is a categorical variable coded as 1 – female, 2 – male.
+
+__party:__ Self reported party affiliation of the person (in the USA). This is a categorical variable coded as 1 - democrat, 2 - republican, 3 - other, 4 – none.
+
+__liberal:__ This variable contains data from a question: please rate how conservative or liberal are you. On a scale of 1-5 where 1 means very conservative and 5 means very liberal. 
+
+# Task
+
+Your task is to do an exploratory factor analysis using the items in the ARS to identify the latent factors underlying the responses. First of all, start by exploring the descriptive statistics and correlations in the dataset to get more familiar with it and to identify any unusual cases or coding errors. Make sure to check the assumptions of factorability and multivariate normality and address them as necessary. You have a free hand in choosing the extraction and rotation methods. You can also exclude items if you see this necessary, but __do not exclude more than 8 items__ in this assignment. (If you still find the average communality below expectations, just report this as a limitation in your report, but continue the task). Keep notes of the steps and different setting/methods you tried during the exploratory factor analysis. 
+
+_(The factor structure of this scale has been previously analyzed by others. If you want, you can use these previous research reports to guide your exploration, or you can ignore them. In any case, do not base your decisions solely on these research reports. Do your own work and base your decisions on your own findings on this dataset.)_
+
+When you have arrived at the factor structure you consider final, give names to the factors you derived from the data. Save the factor scores and build a linear regression model to predict how conservative or liberal participants are (using the “liberal” variable as a dependent variable) with the factors you identified as the predictors.
+
+__To simplify the task you can regard all likert scale variables (ar1-28 and liberal) as if they were continuous variables!__ So you do not have to use polychoric correlation for factor analysis and you do not have to perform ordinal regression.
+
+# What to report
+
+Report if you have found any unusual things (outliers or coding errors) in the dataset and how you dealt with them. Report the results of the assumption checks for factorability and multivariate normality. If any of the assumptions were found to be violated, report what was done to handle that. 
+
+Report the number of factors you chose to keep in your final factor structure and give a rationale why. Include the parallel analysis scree plot in your report. Report the post-extraction eignevalues, variance explained, and cumulative variance explained by the final factors in a table format. Report the average post-extraction communality of the items. 
+
+Report which rotation you chose to use (if any) and why. Report the final factor structure including the factor names. Also, report the post-extraction commonalities of each item and the loadings of the items on the final factors in a table format. (These can be reported in the same table). This table should contain the loadings that you used to interpret the factors in your analysis (e.g. the loadings listed in the rotated factor matrix or the pattern matrix). The table should be structured in a way to help the reader easily see which items load high on which factors.
+
+Report if you have excluded any items, and give a rationale for each. 
+
+Report which factor (if any) was the most influential predictor of how liberal a person is in the linear regression model and explain what do you base this assessment on.
+
+# What to discuss
+
+Talk about the limitations of your study and findings. 
+
+# Solution
+
+## Read the data
+
+Read the Animal Rights Scale (ARQ) dataset from the 'data/' folder. Pay attention to the extension.
+
+```{r}
+
+```
+
+## EDA
+
+```{r}
+
+```
+
+## Data manipulation
+
+Recode the sex and party variables as factor type variables with the following levels:
+  * sex: 1 - male, 2 - female
+  * party: 1 - democrat, 2 - republican, 3 - other, 4 - none
+
+```{r}
+
+```
+
+# Creating a correlation matrix
+
+__Note:__ Remember to only include the variables of the questionnaire that will be part of the factor analysis.
+
+```{r}
+
+```
+
+Create the correlation matrix.
+
+```{r}
+
+```
+
+## Visualizing the correlation matrix
+
+Create a visualization of the results of the correlation matrix.
+
+```{r}
+
+```
+
+## Test for factorability
+
+Calculate the KMO score.
+
+```{r}
+
+```
+
+## Test for multivariate normality
+
+```{r}
+
+```
+
+Test for skewness and kurtosis.
+
+```{r}
+
+```
+
+## Create scree plot
+
+Create a scree plot to help the decision on how many factors to include.
+
+```{r}
+
+```
+
+## Run the factor analysis
+
+Run the factor analysis with the chosen number of factors.
+
+```{r}
+
+```
+
+Sort the communality scores in decreasing order.
+
+```{r}
+
+```
+
+Calculate the mean communality scores.
+
+```{r}
+
+```
+
+Show the factor loadings for the chosen factor structure.
+
+```{r}
+
+```
+
+Visualize the factor structure.
+
+```{r}
+
+```
+
+## Run linear regression
+
+Calculate the factor scores.
+
+```{r}
+
+```
+
+Bind factor scores to the original dataset.
+
+```{r}
+
+```
+
+Run the logistic regression.
+
+```{r}
+
+```
+

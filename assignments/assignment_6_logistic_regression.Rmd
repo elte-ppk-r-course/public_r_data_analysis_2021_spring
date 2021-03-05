@@ -1,0 +1,130 @@
+---
+title: "Assignment 4: Logistic regression"
+author: "Marton Kovacs"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Background story
+
+In this lab assignment you are going to work with data related to the survival of passengers of the RMS Titanic. “The sinking of the Titanic is one of the most infamous shipwrecks in history. On April 15, 1912, during her maiden voyage, the widely considered “unsinkable” RMS Titanic sank after colliding with an iceberg. Unfortunately, there weren’t enough lifeboats for everyone onboard, resulting in the death of 1502 out of 2224 passengers and crew. While there was some element of luck involved in surviving, it seems some groups of people were more likely to survive than others.” (Quote from the Kaggle Titanic Challenge).
+
+For the sake of this assignment, let’s imagine that you are called as an expert to a court case: Kate, one of the survivors of the Titanic accident is suing her __father, Leonardo, for not accompanying Kate and her mother Sue on the trip__ and this way decreasing their chances of survival. The family planned to move to the US back in 1912. __They bought 3rd class tickets for the three of them for 8 British Pounds each. (They did not get cabins with their 3rd class tickets.)__ The plan was that they embark in Southampton and all of them got on board, but Leonardo got separated from them in the rush of passengers during boarding. Later it turned out that Leonardo deliberately got separated from them and got off the boat before it’s departure, to run away and live with his mistress. __Kate was only 4 at the time, and Sue was 20.__ During the accident __Kate got on one of the last lifeboats and was later rescued, but there was no room for Sue on the lifeboat, and she did not survive the disaster.__
+
+Now 20 years later Kate is suing her father for leaving them on the boat, because she thinks that this eventually led to Sue’s death, as the absence of Leonardo decreased their chances of survival.
+
+You are called in as an expert to this court case. Your task is to present a report about whether the presence of Leonardo statistically could have led to an improved chance of survival.
+
+# Dataset
+
+Use the data file called ‘assignment_4_dataset’, from the 'data/' folder.
+
+This is the training dataset of the Titanic dataset from the Kaggle Titanic Challenge (https://www.kaggle.com/c/titanic/overview), a prediction challenge for people who are just starting to learn about machine learning and other statistical prediction techniques. The following description is available for the dataset:
+
+## Metadata
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+metadata <- readr::read_tsv(here::here("data/assignment_6_metadata.tsv"))
+
+metadata %>% 
+  knitr::kable()
+```
+
+# Task
+
+As usual, start with exploring your dataset. Do descriptive and exploratory analysis including visualization to understand the data and to see what type of data you are dealing with. 
+
+You should build a statistical model with which you can accurately estimate Kate’s and Sue’s chances of survival. First you should fit a statistical model (for example a logistic regression model) on the dataset, calculate the regression equation, and use that equation to compute the survival probability for Kate and Sue separately with and without having Leonardo on board the ship with them.
+
+You can use whichever predictor you would like, but you need to build a model that is at least as accurate so that it can correctly predict the outcome value within the sample with at least 72% accuracy for BOTH those who actually survived and who actually died in the disaster. You need to check this in the Classification table. So it is not enough to have 72% overall correct percentage! In order to be able to reach this prediction accuracy you might have to use some special predictors or to do some feature engineering. A comprehensive exploratory analysis including the visualisation of the relationship of different predictors might help in this. Keep in mind that this is one of the most popular prediction challenges on Kaggle, so there is plenty of discussion and guides on the web about different models and features. If you get stuck, you can look these up to improve your prediction performance.
+
+You do not need to check model assumptions in this assignment (but you can do so if you want to and this might help you improve your prediction performance). 
+
+# What to report
+
+When you have arrived at a satisfactory model describe the final model to the reader so that it is clear how is the model built up, and that based on the description the reader could reproduce your model.
+
+Report about the goodness of fit of the model, whether it is significantly better than the null model (based on the AIC and chi^2 test statistics), and how effective is your model at predicting the outcome (based on McFadden R^2, and the correct prediction percentages in the classification table of the final model). Be sure to report the total correct prediction percentage of the final model and also the correct prediction percentages separately for those who actually died, and those who actually survived.
+
+Also, report the statistics describing the coefficients of the predictors in a table format (for each predictor, this table should include the following: logit regression coefficients, Odds ratios, and 95% confidence intervals for the Odds ratios, Chi^2 test statistics and p values, and AIC values for the reduced models). 
+
+Report which were the most influential predictors in the model, and which were the predictors which did not seem to have unique added value to the model.
+
+Write up the regression equation of the model in the form of 𝑌 = 𝑏0 + 𝑏1 ∗ X1 + 𝑏2 ∗ X2 +…+ bn * Xn, in which you use the actual regression coefficients of your models. (b0 stands for the intercept and b1, b2 … bn stand for the model coefficients for each of the predictors, and X1, X2, … Xn denote the predictors).
+
+Finally, report the predicted probability of survival for Kate and Sue separately with and without having Leonardo on board the ship with them. (So you will have to estimate 4 probabilities in total, two for Kate and two for Sue). It is important that this is in the probability scale (since the jury does not know what logit means and how to interpret it).
+
+# What to discuss
+
+In your discussion of the findings, briefly interpret the results of the above analyses in light of the court case. Based on your results do you find it likely that the presence of Leonardo (spouse to Sue and parent to Kate) would have improved the survival chances of Sue and Kate? What is the best predictor of survival in the model and how does the presence of a spouse and presence of a parent compare to its influence?
+
+# Solution
+
+## Read the data
+
+Read the dataset used in this assignment. Pay attention to the extension of the datafile.
+
+```{r}
+
+```
+
+## EDA
+
+```{r}
+
+```
+
+## Clean the data
+
+```{r}
+
+```
+
+## Creating a datatable for Sue, Kate, and Leonardo
+
+```{r}
+
+```
+
+## Building the null model
+
+```{r}
+
+```
+
+## Building the model
+
+```{r}
+
+```
+
+# Check the assumptions
+
+```{r}
+
+```
+
+# Compare the models
+
+```{r}
+
+```
+
+# Calculate odds ratio and confidence interval
+
+```{r}
+
+```
+
+# Report the results
+
+```{r}
+
+```
+

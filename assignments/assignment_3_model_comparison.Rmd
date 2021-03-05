@@ -1,0 +1,191 @@
+---
+title: "Assignment 3: Model comparison"
+author: "Marton Kovacs"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+In this lab assignment you are going to work with (simulated) data related to perioperative pain and its psychological and hormonal predictors. In the assignment you will assess the added benefit of including some psychological and hormonal predictors to the already established demographic predictors of pain.
+
+In this assignment you will set up a hierarchical regression model to predict postoperative pain after wisdom tooth surgery. 
+
+# Research problem
+
+The amount of pain experienced around and after surgeries are highly variable between and within individuals. In order to improve surgical pain management regimens we need to understand what influences pain around surgical procedures and predict the amount of pain an individual will experience.
+
+Your first study in this area is related to assessing the influence of trait and state psychological measures on pain, and to see whether taking into account these variables can improve our understanding of postoperative pain.
+
+# Procedures and measures
+
+Use the data file called ‘assignment_3_dataset’, from the 'data/' folder.
+
+You have collected data from 160 adults who were scheduled to undergo surgical extraction of the third mandibular molar (wisdom tooth surgery). Patients filled out a form in the waiting room before their surgery. The form contained questions about their sex, age, and weight, and psychological questionnaires assessing anxiety, pain catastrophizing, and mindfulness (see descriptions below). You also got blood samples and saliva samples from participants in the waiting room 5 minutes before their operations to determine the serum (a component of the blood) and salivary cortisol levels of participants. Participants were contacted 5 hours after the surgery to see how much pain they were experiencing. The __level of pain__ at that moment was recorded using a numerical rating scale using a __scale of 0 to 10__, where 0 means “no pain” and 10 means “worst pain I can imagine”. 
+
+__The State Trait Anxiety Inventory:__ T measures trait anxiety on a scale of 20 to 80, higher scores mean higher anxiety. Anxiety has been found in many studies to positively correlate with the level of pain experienced. This is __variable STAI_trait__ in the dataset.
+
+__The Pain Catastrophizing Scale__ measures the extent of pain catastrophizing, which is characterized by a tendency to magnify the threat value of a pain stimulus and to feel helpless in the presence of pain, as well as by a relative inability to prevent or inhibit pain-related thoughts in anticipation of, during, or following a painful event. The total score on this scale ranges from 0 to 52, higher scores mean higher catastrophizing. Pain catastrophizing is one of the well-established predictors of clinical pain. This is __variable pain_cat__ in the dataset.
+
+__The Mindful Attention Awareness Scale (MAAS)__ measures dispositional mindfulness, which may be described as a tendency to turn attention to present-moment experiences in an open, non-judgmental way. The MAAS total score ranges from 1 to 6 (an average of the item scores), with higher scores representing higher dispositional mindfulness. Trait mindfulness has been theorized to serve as a protective factor against pain, as the individual would be more objective about their pain experience and tend to associate less discomfort, despair, and hopelessness to the pain-related sensations. This is __variable mindfulness__ in the dataset.
+
+__Cortisol__ is a stress hormone associated with acute and chronic stress. Cortisol levels are thought to be positively associated with pain experience. Cortisol can be __measured from both blood and the saliva__, although, serum cortisol is often regarded in medical research as more reliably related to stress (serum is a component of the blood plasma). These are __variables cortisol_serum__, and __cortisol_saliva__ in the dataset.
+
+# Research question
+
+Previous studies and meta-analyses showed that age and sex are often predictors of pain (age is negatively associated with pain, while sex is a predictor more dependent on the type of the procedure). You would like to determine the extent to which taking into account psychological and hormonal variables aside from the already used demographic variables would improve our understanding of postoperative pain.
+
+To answer this research question you will __need to compare two models__ (with a hierarchical regression). The __simpler model__ should contain __age and sex as predictors of pain__, while the __more complex model__ should contain the __predictors: age, sex, STAI, pain catastrophizing, mindfulness, and cortisol measures__. Notice that the predictors used in the simpler model are a subset of the predictors used in more complex model. __You will have to do model comparison to assess whether substantial new information was gained about pain in the more complex model compared to the simpler model.__  
+
+# What to report
+
+As usual, before you can interpret your model, you will need to run data and model diagnostics. First, check the variables included in the more complex model (age, sex, STAI, pain catastrophizing, mindfulness, and cortisol measures as predictors, and pain as an outcome) for __coding errors__, and the model itself for __influential outliers__ (for example using Cook’s distance). Furthermore, check the final model to see if the __assumptions of linear regression hold true__, that is, __normality__ (of the residuals), __linearity__ (of the relationship), __homogeneity of variance__ (also called homoscedasticity) and that there is no excess __multicollinearity__ (“uncorrelated predictors” in Navarro’s words). If you find anything amiss during these checks, make the appropriate decision or correction and report your findings and actions in your report. 
+
+__Note:__ If you do any changes, such as exclude cases, or exclude predictors from the model, you will have to re-run the above checks for your final data and model.
+
+Report the results of the simpler model and the more complex model. For both models you should report the model test statistics (adj.R2, F, df, and p value). Also, report the statistics describing the coefficients of the predictors in a table format (unstandardized regression coefficients and 95% confidence intervals, standardized regression coefficients (B and Beta values), and p values).
+
+Write up the regression equation of the more complex model in the form of 𝑌 = 𝑏0 + 𝑏1 ∗ X1 + 𝑏2 ∗ X2 +…+ bn * Xn, in which you use the actual regression coefficients of your models. (b0 stands for the intercept and b1, b2 … bn stand for the model coefficients for each of the predictors, and X1, X2, … Xn denote the predictors).
+
+Compare the two models in terms of how much variance they explain of pain’s variability in the sample. Report Akaike information criterion (AIC) for both models and the F test statistic and p value of the likelihood ratio test comparing the two models.
+
+# What to discuss
+
+In your discussion of the findings, briefly interpret the results of the above analyses, and indicate whether you think that anything was gained by including the psychological and hormone measures in the model.
+
+# Solution
+
+## Read the data
+
+Read the dataset used in this assignment. Pay attention to the extension of the datafile.
+
+```{r}
+
+```
+
+## Data and model diagnostics 
+### Data diagnostics
+#### Descriptives of the variables
+
+Run an exploratory data analysis (EDA) to investigate the dataset.
+
+```{r}
+
+```
+
+#### Correct coding errors
+
+If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
+
+```{r}
+
+```
+
+### Model diagnostics
+#### Build the more complex model
+
+In order to test the more complex model for outliers and to test the assumptions first build the model.
+
+```{r}
+
+```
+
+#### Checking for influential outliers
+
+Check for outlier values in the model.
+
+```{r}
+
+```
+
+#### Checking assumptions
+
+Check the normality assumption.
+
+```{r}
+
+```
+
+Check the linearity assumption.
+
+```{r}
+
+```
+
+Check the homoscedasticty assumption (homogeneity of variance).
+
+```{r}
+
+```
+
+Check the multicollinearity assumption.
+
+(VIF above 5), or a VIF threshold of 3 is recommended in this paper: http://onlinelibrary.wiley.com/doi/10.1111/j.2041-210X.2009.00001.x/full
+
+Some info about VIF: 
+https://statisticalhorizons.com/multicollinearity
+http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
+
+```{r}
+
+```
+
+### Making decision based on model diagnostics
+
+If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
+
+```{r}
+
+```
+
+#### Checking outliers of the updated model
+
+```{r}
+
+```
+
+#### Checking assumptions of the updated model
+
+Normality assumption
+
+```{r}
+
+```
+
+Linearity assumption
+
+```{r}
+
+```
+
+Homoscedasticty assumption (homogeneity of variance)
+
+```{r}
+
+```
+
+Multicollinearity assumption
+
+```{r}
+
+```
+
+## Model comparison
+
+Create the simple model and get the results of the model that needs to be reported based on the What to report section.
+
+```{r}
+
+```
+
+Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
+
+```{r}
+
+```
+
+Compare the two models.
+
+```{r}
+
+```
+

@@ -1,0 +1,63 @@
+---
+title: 'Assignment 2: Data visualization'
+author: "Tamas Nagy"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+You will have to create 3 plots based on the datasets and instructions detailed below. You will find the plots themeselves in the `assignments/assignment_2_plots`. Your task is to write the code that will reproduce the plots as closely as possible.
+
+# Skills needed to solve this assignment
+
+-   Using R and RStudio, reading data
+-   Reporting using RMarkdown
+-   Using Git and Github (for submitting the task)
+-   Data manipulation (e.g. dplyr, tidyr), and working with factors (forcats)
+-   Data visuzlization (ggplot2)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+## Task 1: Climbing expeditions
+
+The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the three datasets, use the "expeditions". Reproduce the plot below! Notice a few things:
+
+-   Use `forcats::fct_lump()` to get the 15 most frequent peaks, and drop the "Other" category.
+-   The bars are ordered by the sum of all expeditions (use `fct_reorder()`).
+-   The bar colors use the viridis palette and light theme.
+
+```{r}
+
+```
+
+## Task 2: PhDs awarded
+
+The 2019-02-19 TidyTueday dataset is about phd-s awarded by year and field. There is only one dataset, it is called `phd_by_field`. Reproduce the plot below!
+
+Notes:
+
+-   First you have to aggregate the data to count all phd-s by broad fields.
+-   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
+-   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
+
+```{r}
+
+```
+
+## Task 3: Commute in the US
+
+The 2019-11-05 TidyTueday dataset is about commuting to work in each city in the US by bike or on foot. There is only one dataset, it is called `commute`. Reproduce the plot below!
+
+Notes:
+
+-   First you have to aggregate the data to count all commutes by state.
+-   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
+-   The point size is 2, . The theme is set to light.
+
+```{r}
+
+```
