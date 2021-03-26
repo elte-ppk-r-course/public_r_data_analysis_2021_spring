@@ -32,6 +32,11 @@ Note: There are several different ways to solve these tasks, feel free to come u
 Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there.
 
 ```{r}
+require(data.table)
+require(curl)
+
+urlfile<-'https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv'
+cocktail_data<-as.data.frame(fread(urlfile))
 
 ```
 
