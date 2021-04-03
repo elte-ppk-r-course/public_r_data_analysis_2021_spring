@@ -31,6 +31,16 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bar colors use the viridis palette and light theme.
 
 ```{r}
+require(data.table)
+require(curl)
+
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv'
+#read it in as dataframe with curl
+expeditions_data<-as.data.frame(fread(urlfile))
+
+expeditions_data %>%
+  mutate(forcats::fct_lump(peak_id, 15))
 
 ```
 
