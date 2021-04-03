@@ -35,7 +35,9 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 require(data.table)
 require(curl)
 
+#store the url in a variable
 urlfile<-'https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv'
+#read it in as dataframe with curl
 cocktail_data<-as.data.frame(fread(urlfile))
 
 ```
@@ -47,12 +49,11 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 ```{r}
 library(tidyr)
 
-ingredient_cols = paste("ingredient", 1:6)
+#creating cleaned dataframe, first we split ingredients with the substring between them, then we use regex to clear out unneccessary values
 cocktail_data_cleaned = cocktail_data %>% 
-  separate(ingredients, into = ingredient_cols, sep = "<br/>")
-
-cocktail_data_cleaned[ingredient_cols] <- lapply(cocktail_data_cleaned[ingredient_cols], function(x) gsub("(.*\\s(oz|dashes|bsp|dash|drops|drop)\\s|\\s[(].*[)])", "", x))
-
+    mutate(ingredients = strsplit(as.character(ingredients), "<br/>")) %>% 
+    unnest(ingredients) %>%
+    mutate(ingredients = gsub("(.*\\s(oz|dashes|bsp|dash|drops|drop)\\s|\\s[(].*[)])", "", ingredients))
 
 ```
 
@@ -61,11 +62,14 @@ cocktail_data_cleaned[ingredient_cols] <- lapply(cocktail_data_cleaned[ingredien
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
-ingredient_df = cocktail_data_cleaned[ingredient_cols] %>%
-  gather(ingredient_num, ingredient, na.rm=TRUE)
+#this is the list of ingredients, however...
+ingredient_list_abc = sort(unique(cocktail_data_cleaned$ingredients))
 
-ingredient_list_abc = ingredient_df[order(ingredient_df$ingredient),2]
-ingredient_list_abc_split = unlist(strsplit(ingredient_list_abc, " or "))
+#there is an "or" conditional ingredient in one cocktail, but both of those are not unique
+ingredients_all_orsplit = unlist(strsplit(cocktail_data_cleaned$ingredients, " or "))
+ingredient_list_abc_split = sort(unique(ingredients_all_orsplit))
+
+ingredient_list_abc_split
 
 ```
 
@@ -74,7 +78,8 @@ ingredient_list_abc_split = unlist(strsplit(ingredient_list_abc, " or "))
 How many different ingredients you will need?
 
 ```{r}
-different_ingredients = length(unique(ingredient_list_abc_split))
+#we use the list where we splitted the "or" statement
+different_ingredients = length(ingredient_list_abc_split)
 different_ingredients
 ```
 
@@ -83,12 +88,13 @@ different_ingredients
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+#we are working with all the ingredients, where we split up the "or" conditional ingredient
 #with ties, all the ingredients show up
-ingredients_frequency = data.table(sort(table(ingredient_list_abc_split),decreasing=TRUE))
+ingredients_frequency = data.table(sort(table(ingredients_all_orsplit),decreasing=TRUE))
 top10_ties = ingredients_frequency[, head(.SD, 10), by="N"]
 top10_ties
 #without ties
-top10_noties = sort(table(ingredient_list_abc_split),decreasing=TRUE)[1:10]
+top10_noties = sort(table(ingredients_all_orsplit),decreasing=TRUE)[1:10]
 top10_noties
 ```
 
@@ -97,6 +103,16 @@ top10_noties
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+#we use the cleaned dataframe not splitted for the "or", because it counts as one ingredient
+ingredient_num_table = cocktail_data_cleaned %>%
+    group_by(name) %>%
+    dplyr::summarise(Count = n()) %>%
+    arrange(desc(Count))
+maximum_ingrdient = max(ingredient_num_table$Count)
+maximum_ingrdient
+
+#filtered cocktails, that have the most ingredients
+ingredient_num_table[ingredient_num_table$Count == maximum_ingrdient,]
 
 ```
 
@@ -105,20 +121,35 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
-rare_ingredients = nrow(subset(ingredients_frequency, N == 1))
-rare_ingredients
+#we use the list with "or" splitted, because we are interested about all the ingredients
+rare_ingredients = names(table(ingredients_all_orsplit))[table(ingredients_all_orsplit) == 1]
+length(rare_ingredients)
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
-
+#introducing new column to log if ingredient is rare or not (1 or 0)
+cocktail_data_cleaned$RareIngrdient <- as.numeric(cocktail_data_cleaned$ingredients %in% rare_ingredients)
+#select only those cocktails that have ingredients with 1 in RareIngredient column
+cocktails_with_rare = sort(unique(cocktail_data_cleaned$name[cocktail_data_cleaned$RareIngrdient == 1]))
+#list of cocktails and number of them
+cocktails_with_rare
+length(cocktails_with_rare)
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+#using the same column from before, but we aggregate ingredient rareness and only keep those that are 0, so no rare ingredients were among their ingredients
+cocktails_without_rare = cocktail_data_cleaned %>%
+  group_by(name) %>%
+  dplyr::summarise(IngredientRareness = sum(RareIngrdient)) %>%
+  filter(IngredientRareness == 0)
+#list of cocktails and number of them
+cocktails_without_rare$name
+length(cocktails_without_rare$name)
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -134,6 +165,15 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+#using reshape's dcast to create the matrix
+library(reshape2)
+cocktail_cheatsheet = dcast(as.data.table(cocktail_data_cleaned), name~ingredients, length)
+
+#rename the defaults
+cocktail_cheatsheet[cocktail_cheatsheet == 0] <- ""
+cocktail_cheatsheet[cocktail_cheatsheet == 1] <- "x"
+
+cocktail_cheatsheet
 
 ```
 
