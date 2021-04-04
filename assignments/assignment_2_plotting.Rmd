@@ -33,14 +33,26 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 ```{r}
 require(data.table)
 require(curl)
+require(viridis)
 
 #store the url in a variable
 urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv'
 #read it in as dataframe with curl
 expeditions_data<-as.data.frame(fread(urlfile))
 
+#factorize, filter, reorder the data and then make the plot accordingly
 expeditions_data %>%
-  mutate(forcats::fct_lump(peak_id, 15))
+  mutate(peak_name = as.factor(peak_name)) %>%
+  mutate(peak_name = forcats::fct_lump(peak_name, n = 15)) %>%
+  filter(peak_name != "Other") %>%
+  mutate(peak_name = fct_rev(fct_infreq(peak_name))) %>%
+  ggplot( aes(x = peak_name, fill = season)) +
+    geom_bar() +
+    coord_flip() +
+    labs(y = "Number of expeditions", title = "The 15 most popular peaks stacked by season of expedition") +
+    theme_light() +
+    theme(legend.position = "bottom") +
+    scale_fill_viridis(discrete = TRUE)
 
 ```
 
@@ -55,6 +67,12 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv'
+#read it in as dataframe with curl
+phd_data<-as.data.frame(fread(urlfile))
+
+
 
 ```
 
@@ -69,5 +87,11 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv'
+#read it in as dataframe with curl
+commute_data<-as.data.frame(fread(urlfile))
+
+
 
 ```
