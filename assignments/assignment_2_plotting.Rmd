@@ -72,7 +72,18 @@ urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/d
 #read it in as dataframe with curl
 phd_data<-as.data.frame(fread(urlfile))
 
-
+#  and then make the plot accordingly
+phd_data %>%
+  mutate(broad_field = as.factor(broad_field)) %>%
+  group_by(year, broad_field) %>%
+  summarise(sumphd = sum(n_phds, na.rm = TRUE)) %>%
+  ggplot( aes(x = year, y = sumphd, color = broad_field)) +
+    geom_line(size = 1.2) +
+    labs(x = element_blank(), y = element_blank(), title = "Number of awarded Ph.D.-s in the US by year", colour = "Broad field") +
+    scale_fill_brewer(palette = "Dark2") +
+    theme_minimal() +
+    scale_x_continuous(breaks = scales::pretty_breaks()) +
+    scale_y_continuous(labels = scales::comma_format())
 
 ```
 
