@@ -72,7 +72,7 @@ urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/d
 #read it in as dataframe with curl
 phd_data<-as.data.frame(fread(urlfile))
 
-#  and then make the plot accordingly
+#summarise data and then make the plot accordingly
 phd_data %>%
   mutate(broad_field = as.factor(broad_field)) %>%
   group_by(year, broad_field) %>%
@@ -103,6 +103,18 @@ urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/d
 #read it in as dataframe with curl
 commute_data<-as.data.frame(fread(urlfile))
 
-
+#summarise data, spread long to wide, make the logtransformed plot accordignly
+commute_data %>%
+  group_by(state, mode, state_region, state_abb) %>%
+  summarise(sum_ppl = sum(n, na.rm = TRUE)) %>%
+  spread(mode, sum_ppl) %>%
+  ggplot( aes(x = Walk, y = Bike, color = state_region, label = state_abb)) +
+    geom_point(size = 2) +
+    geom_text(aes(label=state_abb), colour = "black") +
+    labs(x = "Number of ppl walking to work (log N)", y = "Number of ppl biking to work (log N)", title = "Number of people walking vs. biking to work in each USA state", colour = "State region") +
+    scale_x_log10(labels = scales::comma_format()) +
+    scale_y_log10(labels = scales::comma_format()) +
+    theme_light()
+  
 
 ```
