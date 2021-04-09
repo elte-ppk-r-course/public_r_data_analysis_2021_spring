@@ -1,0 +1,56 @@
+---
+title: "final_project"
+author: "Alex Ilyés"
+date: '2021 04 09 '
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(tidytuesdayR)
+theme_set(theme_light())
+```
+
+## Loading in the data
+
+For this final assingment project, I will use the Anime dataset from TidyTuesday's 2019-04-03 occasion:
+
+```{r}
+
+anime <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-23/tidy_anime.csv")
+
+```
+
+## Exploratory Analysis
+
+First off, we do some exploratory analysis, to know more about the dataset:
+
+```{r}
+
+anime %>%
+  count(genre, sort= TRUE) %>%
+  head(20) %>%
+  mutate(genre = fct_reorder(genre, n)) %>%
+  ggplot(aes(n, genre)) +
+  geom_col()
+
+```
+
+```{r}
+
+anime %>%
+  separate(start_date, c("start_year", NA, NA)) %>%
+  filter(type == "TV") %>%
+  filter(start_year > 1990) %>%
+  mutate(genre = forcats::fct_lump(genre, n = 20)) %>%
+  ggplot(aes(start_year, fill = genre)) +
+  geom_bar()
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
