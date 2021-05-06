@@ -31,6 +31,28 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bar colors use the viridis palette and light theme.
 
 ```{r}
+require(data.table)
+require(curl)
+require(viridis)
+
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv'
+#read it in as dataframe with curl
+expeditions_data<-as.data.frame(fread(urlfile))
+
+#factorize, filter, reorder the data and then make the plot accordingly
+expeditions_data %>%
+  mutate(peak_name = as.factor(peak_name)) %>%
+  mutate(peak_name = forcats::fct_lump(peak_name, n = 15)) %>%
+  filter(peak_name != "Other") %>%
+  mutate(peak_name = fct_rev(fct_infreq(peak_name))) %>%
+  ggplot( aes(x = peak_name, fill = season)) +
+    geom_bar() +
+    coord_flip() +
+    labs(y = "Number of expeditions", title = "The 15 most popular peaks stacked by season of expedition") +
+    theme_light() +
+    theme(legend.position = "bottom") +
+    scale_fill_viridis(discrete = TRUE)
 
 ```
 
@@ -45,6 +67,23 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv'
+#read it in as dataframe with curl
+phd_data<-as.data.frame(fread(urlfile))
+
+#summarise data and then make the plot accordingly
+phd_data %>%
+  mutate(broad_field = as.factor(broad_field)) %>%
+  group_by(year, broad_field) %>%
+  summarise(sumphd = sum(n_phds, na.rm = TRUE)) %>%
+  ggplot( aes(x = year, y = sumphd, color = broad_field)) +
+    geom_line(size = 1.2) +
+    labs(x = element_blank(), y = element_blank(), title = "Number of awarded Ph.D.-s in the US by year", colour = "Broad field") +
+    scale_fill_brewer(palette = "Dark2") +
+    theme_minimal() +
+    scale_x_continuous(breaks = scales::pretty_breaks()) +
+    scale_y_continuous(labels = scales::comma_format())
 
 ```
 
@@ -59,5 +98,23 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+#store the url in a variable
+urlfile<-'https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv'
+#read it in as dataframe with curl
+commute_data<-as.data.frame(fread(urlfile))
+
+#summarise data, spread long to wide, make the logtransformed plot accordignly
+commute_data %>%
+  group_by(state, mode, state_region, state_abb) %>%
+  summarise(sum_ppl = sum(n, na.rm = TRUE)) %>%
+  spread(mode, sum_ppl) %>%
+  ggplot( aes(x = Walk, y = Bike, color = state_region, label = state_abb)) +
+    geom_point(size = 2) +
+    geom_text(aes(label=state_abb), colour = "black") +
+    labs(x = "Number of ppl walking to work (log N)", y = "Number of ppl biking to work (log N)", title = "Number of people walking vs. biking to work in each USA state", colour = "State region") +
+    scale_x_log10(labels = scales::comma_format()) +
+    scale_y_log10(labels = scales::comma_format()) +
+    theme_light()
+  
 
 ```

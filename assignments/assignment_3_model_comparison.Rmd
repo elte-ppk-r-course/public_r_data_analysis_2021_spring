@@ -59,6 +59,9 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+require(readxl)
+
+pain_data <- read_excel("data/assignment_3_dataset.xlsx")
 
 ```
 
@@ -70,6 +73,23 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
 
+require(tidyverse)
+
+#we check the data, by plotting histograms of each numeric column and summarising the sex column
+pain_data %>%
+  group_by(sex) %>%
+  summarise(count = n())
+
+pain_data %>%
+  select(where(is.numeric)) %>%
+  gather() %>%
+  ggplot( aes(value)) +
+    geom_histogram(bins=8) +
+    facet_wrap(~key, scales = 'free_x')
+
+pain_data %>%
+  map(summary)
+
 ```
 
 #### Correct coding errors
@@ -77,6 +97,34 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
+#we already see, that the sex variable has 1 woman type, while the others are female/male coded. We recode this value. Then we also recode into numerical varibale: 0 = female, 1 = male
+#from the summary tables, we can see that the maximum of the Mindfulness Scale is 6.22, which should not be the case, as it ranges from 1 to 6. We exclude this value
+#in the histogram plots, the pain scale does not look normal, there is an extreme outlier of value 50, which should be a coding error. As we are not entirely sure whether it was meant to be a 5,so  we exclude the participant
+
+pain_data_cleaned = pain_data %>%
+  mutate(sex = sub("woman", "female", sex)) %>%
+  mutate(sex = ifelse(sex=="female", 0, 1)) %>%
+  mutate(sex = factor(sex, levels=c(0, 1), labels = c("female","male"))) %>%
+  filter(pain <= 10) %>%
+  filter(mindfulness <= 6)
+
+#we now check the cleaned dataset
+pain_data_cleaned %>%
+  group_by(sex) %>%
+  summarise(count = n())
+
+pain_data_cleaned %>%
+  select(where(is.numeric)) %>%
+  gather() %>%
+  ggplot( aes(value)) +
+    geom_histogram(bins=8) +
+    facet_wrap(~key, scales = 'free_x')
+
+pain_data_cleaned %>%
+  map(summary)
+
+
 
 ```
 
@@ -86,6 +134,10 @@ If you find values in the dataset during the EDA, that are not correct based on 
 In order to test the more complex model for outliers and to test the assumptions first build the model.
 
 ```{r}
+#age, sex, STAI, pain catastrophizing, mindfulness, and cortisol measures
+
+complex_model = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned)
+summary(complex_model)
 
 ```
 
@@ -95,6 +147,40 @@ Check for outlier values in the model.
 
 ```{r}
 
+# Plot the Cook's Distance using the traditional 4/n criterion - based on: http://r-statistics.co/Outlier-Treatment-With-R.html
+cook_distance_remove <- function(some_model, some_data) {
+  cookdistance = cooks.distance(some_model)
+
+  sample_size <- nrow(some_data)
+  plot(cookdistance, pch="*", cex=2, main="Cook Distance influential outliers")  # plot cook's distance
+  abline(h = 4/sample_size, col="red")  # add cutoff line
+  text(x=1:length(cookdistance)+1, y=cookdistance, labels=ifelse(cookdistance>4/sample_size, names(cookdistance),""), col="red")  # add labels
+  
+  influential <- as.numeric(names(cookdistance)[(cookdistance > 4*mean(cookdistance, na.rm=T))])
+  head(some_data[influential, ])
+  
+  some_data_outlierrm = some_data %>%
+    slice(-influential)
+  return(some_data_outlierrm)
+}
+
+#we run the cook's distance outlier removal several times, until we no longer find influential values.
+pain_data_cleaned_outlierrm = cook_distance_remove(complex_model, pain_data_cleaned)
+complex_model2 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned_outlierrm)
+
+pain_data_cleaned_outlierrm2 = cook_distance_remove(complex_model2, pain_data_cleaned_outlierrm)
+complex_model3 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned_outlierrm2)
+
+pain_data_cleaned_outlierrm3 = cook_distance_remove(complex_model3, pain_data_cleaned_outlierrm2)
+complex_model4 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned_outlierrm3)
+
+pain_data_cleaned_outlierrm4 = cook_distance_remove(complex_model4, pain_data_cleaned_outlierrm3)
+complex_model5 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned_outlierrm4)
+
+pain_data_cleaned_outlierrm5 = cook_distance_remove(complex_model5, pain_data_cleaned_outlierrm4)
+complex_model6 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, pain_data_cleaned_outlierrm5)
+
+
 ```
 
 #### Checking assumptions
@@ -102,18 +188,42 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
+#Q-Q plot
+plot(complex_model6, 2)
+#Histogram
+residuals_complex_model6 = enframe(residuals(complex_model6))
+residuals_complex_model6 %>% ggplot() + aes(x=value) + geom_histogram()
+
+#Normality is slightly violated, which could be due to the few amount of observations
+#We choose to use a stricter significance cireria of <0.01 (according to https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf)
 
 ```
 
 Check the linearity assumption.
 
 ```{r}
+require(car)
 
+plott = plot(complex_model6, 1)
+complex_model6 %>% residualPlots()
+
+#As none of the tests are significant, even though we see a bit of a curvature, we assume linaerity holds.
+  
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+require(lmtest)
+
+#We plot the stansardized residuals which show a curious pattern, which can be attributed to the ordinality of the dependent variable
+plot(complex_model6, 3)
+
+#We test significant heteroscdacity with NCV and BT tests based on https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf
+complex_model6 %>% ncvTest()
+complex_model6 %>% bptest()
+
+#We see no significant heteroscedacity, so homoscedacity of the data can be assumed
 
 ```
 
@@ -126,6 +236,17 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
+require(psych)
+
+#Based on the suggested readings, we treat variables above VIF of 3.
+#There are two values like this: cortisol_serum and cortisol_saliva
+#These two measures are different methods to check the cortisol levels, so they essentially give the same information.
+car::vif(complex_model6)
+
+pain_data_cleaned_outlierrm5 %>% select(cortisol_serum, cortisol_saliva) %>%
+  pairs.panels(col="red",lm=T)
+
+#We choose to drop cortisol_saliva and use only cortisol_serum as a cortisol metric in our model, because saliva is a more indirect measure of cortisol than blood serum.
 
 ```
 
@@ -134,13 +255,30 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
+#based on the VIF analysis we remove the cortisol_saliva variable
+complex_model_nosaliva = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned)
+summary(complex_model_nosaliva)
 
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+#we run the cook's distance outlier removal several times, until we no longer find influential values.
+pain_data_cleaned_nosaliva_outlierrm = cook_distance_remove(complex_model_nosaliva, pain_data_cleaned)
+complex_model_nosaliva2 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned_nosaliva_outlierrm)
 
+pain_data_cleaned_nosaliva_outlierrm2 = cook_distance_remove(complex_model_nosaliva2, pain_data_cleaned_nosaliva_outlierrm)
+complex_model_nosaliva3 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned_nosaliva_outlierrm2)
+
+pain_data_cleaned_nosaliva_outlierrm3 = cook_distance_remove(complex_model_nosaliva3, pain_data_cleaned_nosaliva_outlierrm2)
+complex_model_nosaliva4 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned_nosaliva_outlierrm3)
+
+pain_data_cleaned_nosaliva_outlierrm4 = cook_distance_remove(complex_model_nosaliva4, pain_data_cleaned_nosaliva_outlierrm3)
+complex_model_nosaliva5 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned_nosaliva_outlierrm4)
+
+pain_data_cleaned_nosaliva_outlierrm5 = cook_distance_remove(complex_model_nosaliva5, pain_data_cleaned_nosaliva_outlierrm4)
+complex_model_nosaliva6 = lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum, pain_data_cleaned_nosaliva_outlierrm5)
 ```
 
 #### Checking assumptions of the updated model
@@ -148,44 +286,124 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+#Q-Q plot
+plot(complex_model_nosaliva6, 2)
+#Histogram
+residuals_complex_model_nosaliva6 = enframe(residuals(complex_model_nosaliva6))
+residuals_complex_model_nosaliva6 %>% ggplot() + aes(x=value) + geom_histogram()
 
+#Normality is slightly violated, which could be due to the few amount of observations
+#We choose to use a stricter significance cireria of <0.01 (according to https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf)
 ```
 
 Linearity assumption
 
 ```{r}
+plott = plot(complex_model_nosaliva6, 1)
+complex_model_nosaliva6 %>% residualPlots()
 
+#As none of the tests are significant, even though we see a bit of a curvature, we assume linaerity holds.
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
+#We plot the stansardized residuals which show a curious pattern, which can be attributed to the ordinality of the dependent variable
+plot(complex_model_nosaliva6, 3)
 
+#We test significant heteroscdacity with NCV and BT tests based on https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf
+complex_model_nosaliva6 %>% ncvTest()
+complex_model_nosaliva6 %>% bptest()
+
+#We see no significant heteroscedacity, so homoscedacity of the data can be assumed
 ```
 
 Multicollinearity assumption
 
 ```{r}
-
+#Based on the suggested readings, we treat variables above VIF of 3.
+#In this new model, we see no multicolleniarity
+car::vif(complex_model_nosaliva6)
 ```
 
 ## Model comparison
 
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
+The model's test statistics are:
+Adjusted R-squared = 0.06712
+F-statistic = 5.713
+df = 2 and 129
+p value =  0.004195
+
+Based on the coefficients, we see that age (b = -0,072; p = 0.001) is a significant predictor of subjective feeling of pain around and after surgical procedures.
+
 ```{r}
+require(lsr)
+
+#We create the simple model with only age and sex as predictors
+simple_model = lm(pain ~ age + sex, pain_data_cleaned_nosaliva_outlierrm5)
+summary(simple_model)
+
+#Getting the relevant data of predictors in a table 
+sum_simp = summary(simple_model)[["coefficients"]] #unstandardized coefficients, t and p
+conf_simp = confint(simple_model) #95% confidence intervals
+betas_simp = standardCoefs(simple_model) #standardized coefficients (B and beta)
+
+simple_model_coef_table = cbind(sum_simp[-1,], conf_simp[-1,], betas_simp)
+simple_model_coef_table
 
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
+The model's test statistics are:
+Adjusted R-squared = 0.4766
+F-statistic = 20.88
+df = 6 and 125
+p value < 2.2e-16
+
+The model's equation:
+Y = 0.7 - 0.026 * age + 0.24 * sex_male + 0.216 * STAI_trait + 0.8616 * pain_catastrophizing - 0.155 * mindfulness + 0.428 * cortisol_serum
+
+Based on the coefficients, we see that pain catastrophizing (b = 0.862; p = 0.0007) and cortisol measured from serum (b = 0.428; p = 0.0001) are significant predictors of subjective feeling of pain around and after surgical procedures.
+
 ```{r}
+
+#We use the final version of complex model without influential outliers and checked for all assumptions
+summary(complex_model_nosaliva6)
+
+#Getting the relevant data of predictors in a table 
+sum_comp = summary(complex_model_nosaliva6)[["coefficients"]] #unstandardized coefficients, t and p
+conf_comp = confint(complex_model_nosaliva6) #95% confidence intervals
+betas_comp = standardCoefs(complex_model_nosaliva6) #standardized coefficients (B and beta)
+
+complex_model_coef_table = cbind(sum_comp[-1,], conf_comp[-1,], betas_comp)
+complex_model_coef_table
 
 ```
 
 Compare the two models.
 
+Compare the two models in terms of how much variance they explain of pain’s variability in the sample. Report Akaike information criterion (AIC) for both models and the F test statistic and p value of the likelihood ratio test comparing the two models.
+
 ```{r}
+require(lmtest)
+require(stats)
+
+#Comparing the two models with likelihood ratio test
+anova(simple_model, complex_model_nosaliva6)
+# F-test: 26.226; p = 8.517e-16
+lrtest(simple_model, complex_model_nosaliva6)
+# ChiSq = 80.434; p < 2.2e-16
+
+#Reporting the AIC of the models
+AIC(simple_model) # Simple_model AIC = 432.852
+AIC(complex_model_nosaliva6) # Complex model AIC = 360.418
+
+AIC(simple_model, complex_model_nosaliva6)
 
 ```
 
+Comparing the two models we see that the complex model is significantly better at explaining the variance (F = 26.226; p = 8.517e-16), than the simple model. 
+The complex model is also a better fit to the data based on the AIC-measueres (complex AIC = 360.418; simple AIC = 432.852) 
