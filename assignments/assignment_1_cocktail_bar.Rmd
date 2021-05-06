@@ -17,7 +17,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(readr)
+
 
 ```
 
@@ -34,7 +34,7 @@ Note: There are several different ways to solve these tasks, feel free to come u
 Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there.
 
 ```{r}
-cocktail <- read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
+cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
 
 ```
 
@@ -43,6 +43,14 @@ cocktail <- read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/m
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+
+c_cocktail <- separate_rows(cocktail, ingredients, sep = "<br/>")
+
+```
+```{r}
+c_cocktail$ingredients = gsub("[0-9]|oz|[[:punct:]] |abv ", "", c_cocktail$ingredients)
+
+
 
 ```
 
