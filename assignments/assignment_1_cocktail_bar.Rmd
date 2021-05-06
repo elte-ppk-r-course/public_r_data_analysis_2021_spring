@@ -55,6 +55,8 @@ cocktail_data_cleaned = cocktail_data %>%
     unnest(ingredients) %>%
     mutate(ingredients = gsub("(.*\\s(oz|dashes|bsp|dash|drops|drop)\\s|\\s[(].*[)])", "", ingredients))
 
+head(cocktail_data_cleaned)
+
 ```
 
 ## 3. All ingredients in alphabetical order
