@@ -17,6 +17,8 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(dplyr)
+
 
 
 ```
@@ -36,6 +38,7 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 ```{r}
 cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
 
+
 ```
 
 ## 2. Transform the data table and clean the ingredient variable!
@@ -43,14 +46,21 @@ cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-ba
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
-
-c_cocktail <- separate_rows(cocktail, ingredients, sep = "<br/>")
+#We first separate the ingredients in multiple rows
+cocktail <-  separate_rows(cocktail, ingredients, sep = "<b4/>", convert = TRUE)
+#We can verify all the ingredients are in individual rows
+print(cocktail$ingredients)
 
 ```
 ```{r}
-c_cocktail$ingredients = gsub("[0-9]|oz|[[:punct:]] |abv ", "", c_cocktail$ingredients)
+#We remove all types of quantities and all alchohol content e.g 40% abv and 100-proof
 
-
+c_cocktail <-
+  cocktail %>%
+  mutate(ingredients = gsub(".*oz|[0-9]|bsp|dashes|dash|drop|drops|-proof|\\(.*", "", ingredients)) %>%
+  mutate(ingredients = str_trim(ingredients, side = "left"))
+  
+print(c_cocktail$ingredients)
 
 ```
 
@@ -59,6 +69,14 @@ c_cocktail$ingredients = gsub("[0-9]|oz|[[:punct:]] |abv ", "", c_cocktail$ingre
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+#We select the ingredients row and eliminated duplicated values
+ingredients_l <-  distinct(c_cocktail[,8, drop = FALSE])
+#We order the row alphabetically
+ingredients_list <- ingredients_l[order(ingredients_list$ingredients),]
+#List is ready to be sent 
+view(ingredients_list)
+
+
 
 ```
 
@@ -67,7 +85,10 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
+#We count the number of unique occurances
+n_of_ingredients <- n_distinct(ingredients_list)
 
+print(n_of_ingredients)
 ```
 
 ## 5. What are the top 10 ingredients?
