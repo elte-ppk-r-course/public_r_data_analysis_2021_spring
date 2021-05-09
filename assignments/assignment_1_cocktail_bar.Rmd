@@ -74,7 +74,7 @@ ingredients_l <-  distinct(c_cocktail[,8, drop = FALSE])
 #We order the row alphabetically
 ingredients_list <- ingredients_l[order(ingredients_list$ingredients),]
 #List is ready to be sent 
-view(ingredients_list)
+View(ingredients_list)
 
 
 
@@ -96,6 +96,13 @@ print(n_of_ingredients)
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+#Top 10 ingredients without tie
+top_10_ingredients <- sort(table(c_cocktail$ingredients),decreasing=TRUE)[1:10]
+print(top_10_ingredients)
+#Top 10 ingredients with tie
+top_10_ingredients_tie <- sort(table(c_cocktail$ingredients),decreasing=TRUE)[1:11]
+print(top_10_ingredients_tie)
+
 
 ```
 
@@ -104,6 +111,14 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+#We group by cocktail and count all distinct ingredients, then sort them by frequency and then filter the cocktails with the most ingredients
+number_ingredients <- c_cocktail %>%
+  group_by(name) %>%
+  summarize(count_ing = n_distinct(ingredients)) %>%
+  arrange(desc(count_ing)) %>%
+  filter(count_ing == max(count_ing))
+  
+view(number_ingredients)
 
 ```
 
@@ -112,6 +127,7 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
+
 
 ```
 
