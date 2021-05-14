@@ -2,7 +2,7 @@
 title: "Assignment 1: The cocktail bar (data transformation and manipulation)"
 author: "Tamas Nagy"
 output: html_document
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -17,6 +17,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(dplyr)
 ```
 
 # Background
@@ -29,10 +30,10 @@ Note: There are several different ways to solve these tasks, feel free to come u
 
 ## 1. Read the data
 
-Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there.
+Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there. DONE
 
 ```{r}
-
+cocktail_data <- readr:: read_tsv(url("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv"), na = c(" ", "NA", "not yet"))
 ```
 
 ## 2. Transform the data table and clean the ingredient variable!
@@ -40,7 +41,13 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
-
+cocktail_data_clean <- cocktail_data %>%
+  separate_rows(ingredients, sep = "<br/>|<br>|<b4>|<b>|\\sor\\s") %>%
+  mutate(ingredients,
+          ingredients = gsub("[0-9]|oz\\s|dashes\\s|drops\\s|abv|%|\\(|\\)|\\/|\\.", "", ingredients),
+          ingredients = str_trim(ingredients),
+          ingredients = tolower(ingredients)) %>%
+  mutate(ingredients, ingredients = as.factor(ingredients))
 ```
 
 ## 3. All ingredients in alphabetical order
@@ -48,7 +55,11 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+ingredients_list <- cocktail_data_clean %>%
+  count(ingredients) %>%
+  select(ingredients)
 
+ingredients_list
 ```
 
 ## 4. Number of unique ingredients
@@ -56,7 +67,10 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
+ingredients_number <- ingredients_list %>%
+  summarize(number_rows = n())
 
+ingredients_number
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -64,7 +78,12 @@ How many different ingredients you will need?
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+ingredients_most_used <- cocktail_data_clean %>%
+  count(ingredients, sort = TRUE) %>%
+  slice_max(n, n = 10, with_ties = TRUE) %>%
+  select(ingredients)
 
+ingredients_most_used
 ```
 
 ## 6. Which cocktail(s) has/have the most ingredients?
@@ -72,7 +91,12 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+cocktail_most_ingredient <- cocktail_data_clean %>%
+  count(name) %>%
+  arrange(desc(n)) %>%
+  slice_max(n, n = 1, with_ties = TRUE)
 
+cocktail_most_ingredient
 ```
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
@@ -80,19 +104,34 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
+cocktail_one_ingredient <- cocktail_data_clean %>%
+  count(name) %>%
+  filter(n == 1)
 
+cocktail_one_ingredient
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
+cocktail_rare_ingredients <- cocktail_data_clean %>%
+  add_count(ingredients, name = "ingredients_frequency") %>%
+  filter(ingredients_frequency == 1) %>%
+  select(name, ingredients)
 
+cocktail_rare_ingredients
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+cocktail_common_ingredients <- cocktail_data_clean %>%
+  add_count(ingredients, name = "ingredients_frequency") %>%
+  filter(ingredients_frequency > 1) %>%
+  count(name) %>%
+  select(name)
+
+cocktail_common_ingredients
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -107,8 +146,19 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
     relocate(name, sort(names(.)))
 ```
 
-```{r}
+Kiszedtem változókká az ingredients-et és a name-t.
 
+```{r}
+names_cocktail <- cocktail_data_clean %>%
+  count(name) %>%
+  select(name) %>%
+  pull(name)
+
+names_ingredients <- cocktail_data_clean %>%
+  count(ingredients) %>%
+  select(ingredients) %>%
+  mutate(ingredients, ingredients = as.character(ingredients)) %>%
+  pull(ingredients)
 ```
 
 
