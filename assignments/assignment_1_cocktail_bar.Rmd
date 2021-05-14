@@ -42,12 +42,13 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 
 ```{r}
 cocktail_data_clean <- cocktail_data %>%
-  separate_rows(ingredients, sep = "<br/>|<br>|<b4>|<b>|\\sor\\s") %>%
+  separate_rows(ingredients, sep = "<br/>|<br>|<b4>|<b>|<b>\\s|\\sor\\s") %>%
   mutate(ingredients,
           ingredients = gsub("[0-9]|oz\\s|dashes\\s|drops\\s|abv|%|\\(|\\)|\\/|\\.", "", ingredients),
           ingredients = str_trim(ingredients),
           ingredients = tolower(ingredients)) %>%
-  mutate(ingredients, ingredients = as.factor(ingredients))
+  mutate(ingredients, ingredients = as.factor(ingredients))%>%
+  slice(-c(16))
 ```
 
 ## 3. All ingredients in alphabetical order
@@ -59,7 +60,7 @@ ingredients_list <- cocktail_data_clean %>%
   count(ingredients) %>%
   select(ingredients)
 
-ingredients_list
+print.data.frame(ingredients_list)
 ```
 
 ## 4. Number of unique ingredients
@@ -70,7 +71,7 @@ How many different ingredients you will need?
 ingredients_number <- ingredients_list %>%
   summarize(number_rows = n())
 
-ingredients_number
+print.data.frame(ingredients_number)
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -83,7 +84,7 @@ ingredients_most_used <- cocktail_data_clean %>%
   slice_max(n, n = 10, with_ties = TRUE) %>%
   select(ingredients)
 
-ingredients_most_used
+print.data.frame(ingredients_most_used)
 ```
 
 ## 6. Which cocktail(s) has/have the most ingredients?
@@ -96,7 +97,7 @@ cocktail_most_ingredient <- cocktail_data_clean %>%
   arrange(desc(n)) %>%
   slice_max(n, n = 1, with_ties = TRUE)
 
-cocktail_most_ingredient
+print.data.frame(cocktail_most_ingredient)
 ```
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
@@ -108,7 +109,7 @@ cocktail_one_ingredient <- cocktail_data_clean %>%
   count(name) %>%
   filter(n == 1)
 
-cocktail_one_ingredient
+print.data.frame(cocktail_one_ingredient)
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
@@ -119,7 +120,7 @@ cocktail_rare_ingredients <- cocktail_data_clean %>%
   filter(ingredients_frequency == 1) %>%
   select(name, ingredients)
 
-cocktail_rare_ingredients
+print.data.frame(cocktail_rare_ingredients)
 ```
 
 ## 9. What are the cocktails without rare ingredients?
@@ -131,7 +132,7 @@ cocktail_common_ingredients <- cocktail_data_clean %>%
   count(name) %>%
   select(name)
 
-cocktail_common_ingredients
+print.data.frame(cocktail_common_ingredients)
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -146,19 +147,14 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
     relocate(name, sort(names(.)))
 ```
 
-Kiszedtem változókká az ingredients-et és a name-t.
 
 ```{r}
-names_cocktail <- cocktail_data_clean %>%
-  count(name) %>%
-  select(name) %>%
-  pull(name)
+matrix_ingredients <- cocktail_data_clean %>%
+  mutate(index, X = "X") %>%
+  select(name, ingredients, X) %>%
+  spread(ingredients, X, fill = "")
 
-names_ingredients <- cocktail_data_clean %>%
-  count(ingredients) %>%
-  select(ingredients) %>%
-  mutate(ingredients, ingredients = as.character(ingredients)) %>%
-  pull(ingredients)
+print.data.frame(matrix_ingredients)
 ```
 
 

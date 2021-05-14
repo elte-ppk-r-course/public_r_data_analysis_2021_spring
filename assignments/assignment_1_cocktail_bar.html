@@ -207,12 +207,13 @@ pre code {
 <h2>2. Transform the data table and clean the ingredient variable!</h2>
 <p>The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.</p>
 <pre class="r"><code>cocktail_data_clean &lt;- cocktail_data %&gt;%
-  separate_rows(ingredients, sep = &quot;&lt;br/&gt;|&lt;br&gt;|&lt;b4&gt;|&lt;b&gt;|\\sor\\s&quot;) %&gt;%
+  separate_rows(ingredients, sep = &quot;&lt;br/&gt;|&lt;br&gt;|&lt;b4&gt;|&lt;b&gt;|&lt;b&gt;\\s|\\sor\\s&quot;) %&gt;%
   mutate(ingredients,
           ingredients = gsub(&quot;[0-9]|oz\\s|dashes\\s|drops\\s|abv|%|\\(|\\)|\\/|\\.&quot;, &quot;&quot;, ingredients),
           ingredients = str_trim(ingredients),
           ingredients = tolower(ingredients)) %&gt;%
-  mutate(ingredients, ingredients = as.factor(ingredients))</code></pre>
+  mutate(ingredients, ingredients = as.factor(ingredients))%&gt;%
+  slice(-c(16))</code></pre>
 </div>
 <div id="all-ingredients-in-alphabetical-order" class="section level2">
 <h2>3. All ingredients in alphabetical order</h2>
@@ -221,21 +222,73 @@ pre code {
   count(ingredients) %&gt;%
   select(ingredients)
 
-ingredients_list</code></pre>
-<pre><code>## # A tibble: 65 x 1
-##    ingredients                    
-##    &lt;fct&gt;                          
-##  1 absinthe                       
-##  2 absolut citron vodka           
-##  3 agar-clarified grapefruit juice
-##  4 amer picon                     
-##  5 angostura bitters              
-##  6 apple brandy                   
-##  7 benedictine                    
-##  8 blanco tequila                 
-##  9 bourbon                        
-## 10 bsp fernet branca              
-## # … with 55 more rows</code></pre>
+print.data.frame(ingredients_list)</code></pre>
+<pre><code>##                              ingredients
+## 1                               absinthe
+## 2                   absolut citron vodka
+## 3        agar-clarified grapefruit juice
+## 4                             amer picon
+## 5                      angostura bitters
+## 6                           apple brandy
+## 7                            benedictine
+## 8                         blanco tequila
+## 9                                bourbon
+## 10                     bsp fernet branca
+## 11                   bsp raspberry syrup
+## 12                               campari
+## 13 centrifuge-clarified grapefruit juice
+## 14                        champagne acid
+## 15                        cherry herring
+## 16                  clarified lime juice
+## 17                                cognac
+## 18                             cointreau
+## 19                       cranberry juice
+## 20                      crem de violette
+## 21                               curacao
+## 22                dash angostura bitters
+## 23                   dash orange bitters
+## 24               dash peychaud&#39;s bitters
+## 25                        demerara syrup
+## 26                    dolin dry vermouth
+## 27                              drambuie
+## 28                           drop saline
+## 29                          dry vermouth
+## 30                             egg white
+## 31                                   gin
+## 32                      grapefruit juice
+## 33                      green chartreuse
+## 34                             grenadine
+## 35                           heavy cream
+## 36                      hellfire bitters
+## 37                           honey syrup
+## 38      lairds applejack bottled in bond
+## 39                           lemon juice
+## 40                          lillet blanc
+## 41                            lime juice
+## 42                    luxardo maraschino
+## 43     luxardo marschino&lt;b&gt; plymouth gin
+## 44                           old tom gin
+## 45                        orange bitters
+## 46                          orange juice
+## 47                    peychaud&#39;s bitters
+## 48                                 pisco
+## 49                          plymouth gin
+## 50                  quinine simple syrup
+## 51                       raspberry syrup
+## 52                                   rye
+## 53                       saline solution
+## 54                                scotch
+## 55                                simple
+## 56                          simple syrup
+## 57                              sloe gin
+## 58                     sugard -proof rum
+## 59                    sugared -proof rye
+## 60                        sweet vermouth
+## 61                                 water
+## 62             white cr\u008fme de cacao
+## 63                          white mezcal
+## 64                             white rum
+## 65                     yellow chartreuse</code></pre>
 </div>
 <div id="number-of-unique-ingredients" class="section level2">
 <h2>4. Number of unique ingredients</h2>
@@ -243,10 +296,8 @@ ingredients_list</code></pre>
 <pre class="r"><code>ingredients_number &lt;- ingredients_list %&gt;%
   summarize(number_rows = n())
 
-ingredients_number</code></pre>
-<pre><code>## # A tibble: 1 x 1
-##   number_rows
-##         &lt;int&gt;
+print.data.frame(ingredients_number)</code></pre>
+<pre><code>##   number_rows
 ## 1          65</code></pre>
 </div>
 <div id="what-are-the-top-10-ingredients" class="section level2">
@@ -257,22 +308,20 @@ ingredients_number</code></pre>
   slice_max(n, n = 10, with_ties = TRUE) %&gt;%
   select(ingredients)
 
-ingredients_most_used</code></pre>
-<pre><code>## # A tibble: 12 x 1
-##    ingredients           
-##    &lt;fct&gt;                 
-##  1 lemon juice           
-##  2 simple syrup          
-##  3 gin                   
-##  4 sweet vermouth        
-##  5 lime juice            
-##  6 saline solution       
-##  7 water                 
-##  8 rye                   
-##  9 angostura bitters     
-## 10 cognac                
+print.data.frame(ingredients_most_used)</code></pre>
+<pre><code>##               ingredients
+## 1             lemon juice
+## 2            simple syrup
+## 3                     gin
+## 4          sweet vermouth
+## 5              lime juice
+## 6         saline solution
+## 7                   water
+## 8                     rye
+## 9       angostura bitters
+## 10                 cognac
 ## 11 dash angostura bitters
-## 12 luxardo maraschino</code></pre>
+## 12     luxardo maraschino</code></pre>
 </div>
 <div id="which-cocktails-hashave-the-most-ingredients" class="section level2">
 <h2>6. Which cocktail(s) has/have the most ingredients?</h2>
@@ -282,11 +331,9 @@ ingredients_most_used</code></pre>
   arrange(desc(n)) %&gt;%
   slice_max(n, n = 1, with_ties = TRUE)
 
-cocktail_most_ingredient</code></pre>
-<pre><code>## # A tibble: 1 x 2
-##   name                   n
-##   &lt;chr&gt;              &lt;int&gt;
-## 1 Carbonated Negroni     7</code></pre>
+print.data.frame(cocktail_most_ingredient)</code></pre>
+<pre><code>##                 name n
+## 1 Carbonated Negroni 7</code></pre>
 </div>
 <div id="how-many-ingredients-appear-in-only-one-cocktail-rare-ingredient" class="section level2">
 <h2>7. How many ingredients appear in only one cocktail (rare ingredient)?</h2>
@@ -295,9 +342,9 @@ cocktail_most_ingredient</code></pre>
   count(name) %&gt;%
   filter(n == 1)
 
-cocktail_one_ingredient</code></pre>
-<pre><code>## # A tibble: 0 x 2
-## # … with 2 variables: name &lt;chr&gt;, n &lt;int&gt;</code></pre>
+print.data.frame(cocktail_one_ingredient)</code></pre>
+<pre><code>## [1] name n   
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
 </div>
 <div id="which-cocktail-has-an-ingredient-that-is-only-used-in-one-cocktail" class="section level2">
 <h2>8. Which cocktail has an ingredient that is only used in one cocktail?</h2>
@@ -306,21 +353,39 @@ cocktail_one_ingredient</code></pre>
   filter(ingredients_frequency == 1) %&gt;%
   select(name, ingredients)
 
-cocktail_rare_ingredients</code></pre>
-<pre><code>## # A tibble: 31 x 2
-##    name                              ingredients                       
-##    &lt;chr&gt;                             &lt;fct&gt;                             
-##  1 Pisco Sour                        &quot;pisco&quot;                           
-##  2 Pink Lady                         &quot;lairds applejack bottled in bond&quot;
-##  3 Clover Club                       &quot;dolin dry vermouth&quot;              
-##  4 Clover Club                       &quot;raspberry syrup&quot;                 
-##  5 Blood and Sand                    &quot;cherry herring&quot;                  
-##  6 Alexander                         &quot;heavy cream&quot;                     
-##  7 Alexander                         &quot;demerara syrup&quot;                  
-##  8 Cosmopolitan (Modern/Bastardized) &quot;absolut citron vodka&quot;            
-##  9 Cosmopolitan (Modern/Bastardized) &quot;cranberry juice&quot;                 
-## 10 20th Century Cocktail             &quot;white cr\u008fme de cacao&quot;       
-## # … with 21 more rows</code></pre>
+print.data.frame(cocktail_rare_ingredients)</code></pre>
+<pre><code>##                                 name                           ingredients
+## 1                         Pisco Sour                                 pisco
+## 2                          Pink Lady      lairds applejack bottled in bond
+## 3                        Clover Club                    dolin dry vermouth
+## 4                        Clover Club                       raspberry syrup
+## 5                     Blood and Sand                        cherry herring
+## 6                          Alexander                           heavy cream
+## 7                          Alexander                        demerara syrup
+## 8  Cosmopolitan (Modern/Bastardized)                  absolut citron vodka
+## 9  Cosmopolitan (Modern/Bastardized)                       cranberry juice
+## 10             20th Century Cocktail             white cr\u008fme de cacao
+## 11                          Aviation                      crem de violette
+## 12                         Last Word     luxardo marschino&lt;b&gt; plymouth gin
+## 13                         Last Word                           drop saline
+## 14                           Blinker                   bsp raspberry syrup
+## 15                        Blackthorn                              sloe gin
+## 16                        Blackthorn                        orange bitters
+## 17                       Hanky Panky                     bsp fernet branca
+## 18                          Martinez                           old tom gin
+## 19                       Vieux Carre               dash peychaud&#39;s bitters
+## 20                          Brooklyn                            amer picon
+## 21                        Rusty Nail                              drambuie
+## 22                   De La Louisiane                    peychaud&#39;s bitters
+## 23                   De La Louisiane                              absinthe
+## 24                  Blender Daiquiri                     sugard -proof rum
+## 25                 Blender Margarita                          white mezcal
+## 26                 Blender Margarita                      hellfire bitters
+## 27              Blender Whiskey Sour                    sugared -proof rye
+## 28               Gin and Tonic (Dry)                  quinine simple syrup
+## 29          Gin and Juice Centrifuge centrifuge-clarified grapefruit juice
+## 30          Gin and Juice Centrifuge                                simple
+## 31                Gin and Juice Agar       agar-clarified grapefruit juice</code></pre>
 </div>
 <div id="what-are-the-cocktails-without-rare-ingredients" class="section level2">
 <h2>9. What are the cocktails without rare ingredients?</h2>
@@ -330,21 +395,63 @@ cocktail_rare_ingredients</code></pre>
   count(name) %&gt;%
   select(name)
 
-cocktail_common_ingredients</code></pre>
-<pre><code>## # A tibble: 55 x 1
-##    name                 
-##    &lt;chr&gt;                
-##  1 20th Century Cocktail
-##  2 Alexander            
-##  3 Aviation             
-##  4 Bee&#39;s Knees          
-##  5 Between the Sheets   
-##  6 Bijou                
-##  7 Blackthorn           
-##  8 Blender Daiquiri     
-##  9 Blender Margarita    
-## 10 Blender Whiskey Sour 
-## # … with 45 more rows</code></pre>
+print.data.frame(cocktail_common_ingredients)</code></pre>
+<pre><code>##                                 name
+## 1              20th Century Cocktail
+## 2                          Alexander
+## 3                           Aviation
+## 4                        Bee&#39;s Knees
+## 5                 Between the Sheets
+## 6                              Bijou
+## 7                         Blackthorn
+## 8                   Blender Daiquiri
+## 9                  Blender Margarita
+## 10              Blender Whiskey Sour
+## 11                           Blinker
+## 12                    Blood and Sand
+## 13                       Bobby Burns
+## 14                      Brady Crusta
+## 15                          Brooklyn
+## 16                       Brown Derby
+## 17              Carbonated Margarita
+## 18                Carbonated Negroni
+## 19           Carbonated Whiskey Sour
+## 20                    Champs-Elysses
+## 21                         Chartruth
+## 22                  Classic Daiquiri
+## 23                       Clover Club
+## 24                 Corpse Reviver #2
+## 25 Cosmopolitan (Modern/Bastardized)
+## 26           Daiquiri with More Lime
+## 27                   De La Louisiane
+## 28                 Fresh Lime Gimlet
+## 29                Gin and Juice Agar
+## 30          Gin and Juice Centrifuge
+## 31               Gin and Tonic (Dry)
+## 32                         Gold Rush
+## 33                       Hanky Panky
+## 34                Hemingway Daiquiri
+## 35                       Honeysuckle
+## 36         Improved Whiskey Cocktail
+## 37                         Jack Rose
+## 38                         Last Word
+## 39        Manhatan (Boubon, 45% abv)
+## 40           Manhatan (Rye, 50% abv)
+## 41                         Margarita
+## 42                          Martinez
+## 43                           Negroni
+## 44                     Old Fashioned
+## 45                           Old Pal
+## 46                         Pegu Club
+## 47                         Pink Lady
+## 48                        Pisco Sour
+## 49                           Rob Roy
+## 50                        Rusty Nail
+## 51                           Sidecar
+## 52                         Southside
+## 53                       Vieux Carre
+## 54                      Whiskey Sour
+## 55                      Widow&#39;s Kiss</code></pre>
 </div>
 <div id="create-a-cheat-sheet-for-the-bartender" class="section level2">
 <h2>10. Create a cheat sheet for the bartender!</h2>
@@ -355,17 +462,852 @@ cocktail_common_ingredients</code></pre>
 ## 1 Caipirissima &quot;X&quot;          &quot;&quot;          X     &quot;&quot;    &quot;&quot;    X          
 ## 2 Cuba Libre   &quot;&quot;           &quot;X&quot;         X     &quot;&quot;    &quot;&quot;    X          
 ## 3 Mojito       &quot;&quot;           &quot;&quot;          X     &quot;X&quot;   &quot;X&quot;   X</code></pre>
-<p>Kiszedtem változókká az ingredients-et és a name-t.</p>
-<pre class="r"><code>names_cocktail &lt;- cocktail_data_clean %&gt;%
-  count(name) %&gt;%
-  select(name) %&gt;%
-  pull(name)
+<pre class="r"><code>matrix_ingredients &lt;- cocktail_data_clean %&gt;%
+  mutate(index, X = &quot;X&quot;) %&gt;%
+  select(name, ingredients, X) %&gt;%
+  spread(ingredients, X, fill = &quot;&quot;)
 
-names_ingredients &lt;- cocktail_data_clean %&gt;%
-  count(ingredients) %&gt;%
-  select(ingredients) %&gt;%
-  mutate(ingredients, ingredients = as.character(ingredients)) %&gt;%
-  pull(ingredients)</code></pre>
+print.data.frame(matrix_ingredients)</code></pre>
+<pre><code>##                                 name absinthe absolut citron vodka
+## 1              20th Century Cocktail                              
+## 2                          Alexander                              
+## 3                           Aviation                              
+## 4                        Bee&#39;s Knees                              
+## 5                 Between the Sheets                              
+## 6                              Bijou                              
+## 7                         Blackthorn                              
+## 8                   Blender Daiquiri                              
+## 9                  Blender Margarita                              
+## 10              Blender Whiskey Sour                              
+## 11                           Blinker                              
+## 12                    Blood and Sand                              
+## 13                       Bobby Burns                              
+## 14                      Brady Crusta                              
+## 15                          Brooklyn                              
+## 16                       Brown Derby                              
+## 17              Carbonated Margarita                              
+## 18                Carbonated Negroni                              
+## 19           Carbonated Whiskey Sour                              
+## 20                    Champs-Elysses                              
+## 21                         Chartruth                              
+## 22                  Classic Daiquiri                              
+## 23                       Clover Club                              
+## 24                 Corpse Reviver #2                              
+## 25 Cosmopolitan (Modern/Bastardized)                             X
+## 26           Daiquiri with More Lime                              
+## 27                   De La Louisiane        X                     
+## 28                 Fresh Lime Gimlet                              
+## 29                Gin and Juice Agar                              
+## 30          Gin and Juice Centrifuge                              
+## 31               Gin and Tonic (Dry)                              
+## 32                         Gold Rush                              
+## 33                       Hanky Panky                              
+## 34                Hemingway Daiquiri                              
+## 35                       Honeysuckle                              
+## 36         Improved Whiskey Cocktail                              
+## 37                         Jack Rose                              
+## 38                         Last Word                              
+## 39        Manhatan (Boubon, 45% abv)                              
+## 40           Manhatan (Rye, 50% abv)                              
+## 41                         Margarita                              
+## 42                          Martinez                              
+## 43                           Negroni                              
+## 44                     Old Fashioned                              
+## 45                           Old Pal                              
+## 46                         Pegu Club                              
+## 47                         Pink Lady                              
+## 48                        Pisco Sour                              
+## 49                           Rob Roy                              
+## 50                        Rusty Nail                              
+## 51                           Sidecar                              
+## 52                         Southside                              
+## 53                       Vieux Carre                              
+## 54                      Whiskey Sour                              
+## 55                      Widow&#39;s Kiss                              
+##    agar-clarified grapefruit juice amer picon angostura bitters apple brandy
+## 1                                                                           
+## 2                                                                           
+## 3                                                                           
+## 4                                                                           
+## 5                                                                           
+## 6                                                                           
+## 7                                                                           
+## 8                                                                           
+## 9                                                                           
+## 10                                                                          
+## 11                                                                          
+## 12                                                                          
+## 13                                                                          
+## 14                                                                          
+## 15                                          X                               
+## 16                                                                          
+## 17                                                                          
+## 18                                                                          
+## 19                                                                          
+## 20                                                                          
+## 21                                                                          
+## 22                                                                          
+## 23                                                                          
+## 24                                                                          
+## 25                                                                          
+## 26                                                                          
+## 27                                                            X             
+## 28                                                                          
+## 29                               X                                          
+## 30                                                                          
+## 31                                                                          
+## 32                                                                          
+## 33                                                                          
+## 34                                                                          
+## 35                                                                          
+## 36                                                            X             
+## 37                                                                         X
+## 38                                                                          
+## 39                                                            X             
+## 40                                                            X             
+## 41                                                                          
+## 42                                                                          
+## 43                                                                          
+## 44                                                            X             
+## 45                                                                          
+## 46                                                                          
+## 47                                                                          
+## 48                                                                          
+## 49                                                            X             
+## 50                                                                          
+## 51                                                                          
+## 52                                                                          
+## 53                                                                          
+## 54                                                                          
+## 55                                                                         X
+##    benedictine blanco tequila bourbon bsp fernet branca bsp raspberry syrup
+## 1                                                                          
+## 2                                                                          
+## 3                                                                          
+## 4                                                                          
+## 5                                                                          
+## 6                                                                          
+## 7                                                                          
+## 8                                                                          
+## 9                                                                          
+## 10                                                                         
+## 11                                                                        X
+## 12                                                                         
+## 13           X                                                             
+## 14                                                                         
+## 15                                                                         
+## 16                                  X                                      
+## 17                          X                                              
+## 18                                                                         
+## 19                                  X                                      
+## 20                                                                         
+## 21                                                                         
+## 22                                                                         
+## 23                                                                         
+## 24                                                                         
+## 25                                                                         
+## 26                                                                         
+## 27           X                                                             
+## 28                                                                         
+## 29                                                                         
+## 30                                                                         
+## 31                                                                         
+## 32                                  X                                      
+## 33                                                    X                    
+## 34                                                                         
+## 35                                                                         
+## 36                                                                         
+## 37                                                                         
+## 38                                                                         
+## 39                                  X                                      
+## 40                                                                         
+## 41                          X                                              
+## 42                                                                         
+## 43                                                                         
+## 44                                  X                                      
+## 45                                                                         
+## 46                                                                         
+## 47                                                                         
+## 48                                                                         
+## 49                                                                         
+## 50                                                                         
+## 51                                                                         
+## 52                                                                         
+## 53           X                                                             
+## 54                                                                         
+## 55           X                                                             
+##    campari centrifuge-clarified grapefruit juice champagne acid cherry herring
+## 1                                                                             
+## 2                                                                             
+## 3                                                                             
+## 4                                                                             
+## 5                                                                             
+## 6                                                                             
+## 7                                                                             
+## 8                                                                             
+## 9                                                                             
+## 10                                                                            
+## 11                                                                            
+## 12                                                                           X
+## 13                                                                            
+## 14                                                                            
+## 15                                                                            
+## 16                                                                            
+## 17                                                                            
+## 18       X                                                    X               
+## 19                                                                            
+## 20                                                                            
+## 21                                                                            
+## 22                                                                            
+## 23                                                                            
+## 24                                                                            
+## 25                                                                            
+## 26                                                                            
+## 27                                                                            
+## 28                                                                            
+## 29                                                                            
+## 30                                             X              X               
+## 31                                                                            
+## 32                                                                            
+## 33                                                                            
+## 34                                                                            
+## 35                                                                            
+## 36                                                                            
+## 37                                                                            
+## 38                                                                            
+## 39                                                                            
+## 40                                                                            
+## 41                                                                            
+## 42                                                                            
+## 43       X                                                                    
+## 44                                                                            
+## 45       X                                                                    
+## 46                                                                            
+## 47                                                                            
+## 48                                                                            
+## 49                                                                            
+## 50                                                                            
+## 51                                                                            
+## 52                                                                            
+## 53                                                                            
+## 54                                                                            
+## 55                                                                            
+##    clarified lime juice cognac cointreau cranberry juice crem de violette
+## 1                                                                        
+## 2                            X                                           
+## 3                                                                       X
+## 4                                                                        
+## 5                            X                                           
+## 6                                                                        
+## 7                                                                        
+## 8                                                                        
+## 9                                      X                                 
+## 10                                                                       
+## 11                                                                       
+## 12                                                                       
+## 13                                                                       
+## 14                           X                                           
+## 15                                                                       
+## 16                                                                       
+## 17                    X                                                  
+## 18                    X                                                  
+## 19                    X                                                  
+## 20                           X                                           
+## 21                    X                                                  
+## 22                                                                       
+## 23                                                                       
+## 24                                     X                                 
+## 25                                     X               X                 
+## 26                                                                       
+## 27                                                                       
+## 28                                                                       
+## 29                                                                       
+## 30                                                                       
+## 31                    X                                                  
+## 32                                                                       
+## 33                                                                       
+## 34                                                                       
+## 35                                                                       
+## 36                                                                       
+## 37                                                                       
+## 38                                                                       
+## 39                                                                       
+## 40                                                                       
+## 41                                     X                                 
+## 42                                                                       
+## 43                                                                       
+## 44                                                                       
+## 45                                                                       
+## 46                                                                       
+## 47                                                                       
+## 48                                                                       
+## 49                                                                       
+## 50                                                                       
+## 51                           X         X                                 
+## 52                                                                       
+## 53                           X                                           
+## 54                                                                       
+## 55                                                                       
+##    curacao dash angostura bitters dash orange bitters dash peychaud&#39;s bitters
+## 1                                                                            
+## 2                                                                            
+## 3                                                                            
+## 4                                                                            
+## 5        X                                                                   
+## 6                                                   X                        
+## 7                                                                            
+## 8                                                                            
+## 9                                                                            
+## 10                                                                           
+## 11                                                                           
+## 12                                                                           
+## 13                                                                           
+## 14       X                                                                   
+## 15                              X                                            
+## 16                                                                           
+## 17                                                                           
+## 18                                                                           
+## 19                                                                           
+## 20                              X                                            
+## 21                                                                           
+## 22                                                                           
+## 23                                                                           
+## 24                                                                           
+## 25                                                                           
+## 26                                                                           
+## 27                                                                           
+## 28                                                                           
+## 29                                                                           
+## 30                                                                           
+## 31                                                                           
+## 32                                                                           
+## 33                                                                           
+## 34                                                                           
+## 35                                                                           
+## 36                                                                           
+## 37                              X                                            
+## 38                                                                           
+## 39                                                                           
+## 40                                                                           
+## 41                                                                           
+## 42                              X                   X                        
+## 43                                                                           
+## 44                                                                           
+## 45                                                                           
+## 46       X                      X                   X                        
+## 47                                                                           
+## 48                                                                           
+## 49                                                                           
+## 50                                                                           
+## 51                                                                           
+## 52                                                                           
+## 53                              X                                           X
+## 54                                                                           
+## 55                                                                           
+##    demerara syrup dolin dry vermouth drambuie drop saline dry vermouth
+## 1                                                                     
+## 2               X                                                     
+## 3                                                                     
+## 4                                                                     
+## 5                                                                     
+## 6                                                                     
+## 7                                                                     
+## 8                                                                     
+## 9                                                                     
+## 10                                                                    
+## 11                                                                    
+## 12                                                                    
+## 13                                                                    
+## 14                                                                    
+## 15                                                                   X
+## 16                                                                    
+## 17                                                                    
+## 18                                                                    
+## 19                                                                    
+## 20                                                                    
+## 21                                                                    
+## 22                                                                    
+## 23                                 X                                  
+## 24                                                                    
+## 25                                                                    
+## 26                                                                    
+## 27                                                                    
+## 28                                                                    
+## 29                                                                    
+## 30                                                                    
+## 31                                                                    
+## 32                                                                    
+## 33                                                                    
+## 34                                                                    
+## 35                                                                    
+## 36                                                                    
+## 37                                                                    
+## 38                                                      X             
+## 39                                                                    
+## 40                                                                    
+## 41                                                                    
+## 42                                                                    
+## 43                                                                    
+## 44                                                                    
+## 45                                                                   X
+## 46                                                                    
+## 47                                                                    
+## 48                                                                    
+## 49                                                                    
+## 50                                          X                         
+## 51                                                                    
+## 52                                                                    
+## 53                                                                    
+## 54                                                                    
+## 55                                                                    
+##    egg white gin grapefruit juice green chartreuse grenadine heavy cream
+## 1              X                                                        
+## 2                                                                      X
+## 3                                                                       
+## 4              X                                                        
+## 5                                                                       
+## 6              X                                 X                      
+## 7                                                                       
+## 8                                                                       
+## 9                                                                       
+## 10                                                                      
+## 11                              X                                       
+## 12                                                                      
+## 13                                                                      
+## 14                                                                      
+## 15                                                                      
+## 16                              X                                       
+## 17                                                                      
+## 18             X                                                        
+## 19                                                                      
+## 20                                               X                      
+## 21                                               X                      
+## 22                                                                      
+## 23         X                                                            
+## 24             X                                                        
+## 25                                                                      
+## 26                                                                      
+## 27                                                                      
+## 28             X                                                        
+## 29             X                                                        
+## 30             X                                                        
+## 31             X                                                        
+## 32                                                                      
+## 33             X                                                        
+## 34                              X                                       
+## 35                                                                      
+## 36                                                                      
+## 37                                                         X            
+## 38                                               X                      
+## 39                                                                      
+## 40                                                                      
+## 41                                                                      
+## 42                                                                      
+## 43             X                                                        
+## 44                                                                      
+## 45                                                                      
+## 46             X                                                        
+## 47         X                                               X            
+## 48         X                                                            
+## 49                                                                      
+## 50                                                                      
+## 51                                                                      
+## 52             X                                                        
+## 53                                                                      
+## 54         X                                                            
+## 55                                                                      
+##    hellfire bitters honey syrup lairds applejack bottled in bond lemon juice
+## 1                                                                          X
+## 2                                                                           
+## 3                                                                          X
+## 4                             X                                            X
+## 5                                                                          X
+## 6                                                                           
+## 7                                                                           
+## 8                                                                           
+## 9                 X                                                         
+## 10                                                                         X
+## 11                                                                          
+## 12                                                                          
+## 13                                                                          
+## 14                                                                         X
+## 15                                                                          
+## 16                            X                                             
+## 17                                                                          
+## 18                                                                          
+## 19                                                                          
+## 20                                                                         X
+## 21                                                                          
+## 22                                                                          
+## 23                                                                         X
+## 24                                                                         X
+## 25                                                                          
+## 26                                                                          
+## 27                                                                          
+## 28                                                                          
+## 29                                                                          
+## 30                                                                          
+## 31                                                                          
+## 32                            X                                            X
+## 33                                                                          
+## 34                                                                          
+## 35                            X                                             
+## 36                                                                          
+## 37                                                                         X
+## 38                                                                          
+## 39                                                                          
+## 40                                                                          
+## 41                                                                          
+## 42                                                                          
+## 43                                                                          
+## 44                                                                          
+## 45                                                                          
+## 46                                                                          
+## 47                                                             X           X
+## 48                                                                          
+## 49                                                                          
+## 50                                                                          
+## 51                                                                         X
+## 52                                                                         X
+## 53                                                                          
+## 54                                                                         X
+## 55                                                                          
+##    lillet blanc lime juice luxardo maraschino luxardo marschino&lt;b&gt; plymouth gin
+## 1             X                                                                
+## 2                                                                              
+## 3                                           X                                  
+## 4                                                                              
+## 5                                                                              
+## 6                                                                              
+## 7                                                                              
+## 8                        X                                                     
+## 9                        X                                                     
+## 10                                                                             
+## 11                                                                             
+## 12                                                                             
+## 13                                                                             
+## 14                                          X                                  
+## 15                                          X                                  
+## 16                                                                             
+## 17                                                                             
+## 18                                                                             
+## 19                                                                             
+## 20                                                                             
+## 21                                                                             
+## 22                       X                                                     
+## 23                                                                             
+## 24            X                                                                
+## 25                       X                                                     
+## 26                       X                                                     
+## 27                                                                             
+## 28                       X                                                     
+## 29                                                                             
+## 30                                                                             
+## 31                                                                             
+## 32                                                                             
+## 33                                                                             
+## 34                       X                  X                                  
+## 35                       X                                                     
+## 36                                          X                                  
+## 37                                                                             
+## 38                       X                                                    X
+## 39                                                                             
+## 40                                                                             
+## 41                       X                                                     
+## 42                                          X                                  
+## 43                                                                             
+## 44                                                                             
+## 45                                                                             
+## 46                       X                                                     
+## 47                                                                             
+## 48                       X                                                     
+## 49                                                                             
+## 50                                                                             
+## 51                                                                             
+## 52                                                                             
+## 53                                                                             
+## 54                                                                             
+## 55                                                                             
+##    old tom gin orange bitters orange juice peychaud&#39;s bitters pisco
+## 1                                                                  
+## 2                                                                  
+## 3                                                                  
+## 4                                                                  
+## 5                                                                  
+## 6                                                                  
+## 7                           X                                      
+## 8                                                                  
+## 9                                                                  
+## 10                                       X                         
+## 11                                                                 
+## 12                                       X                         
+## 13                                                                 
+## 14                                                                 
+## 15                                                                 
+## 16                                                                 
+## 17                                                                 
+## 18                                                                 
+## 19                                                                 
+## 20                                                                 
+## 21                                                                 
+## 22                                                                 
+## 23                                                                 
+## 24                                                                 
+## 25                                                                 
+## 26                                                                 
+## 27                                                          X      
+## 28                                                                 
+## 29                                                                 
+## 30                                                                 
+## 31                                                                 
+## 32                                                                 
+## 33                                                                 
+## 34                                                                 
+## 35                                                                 
+## 36                                                                 
+## 37                                                                 
+## 38                                                                 
+## 39                                                                 
+## 40                                                                 
+## 41                                                                 
+## 42           X                                                     
+## 43                                                                 
+## 44                                                                 
+## 45                                                                 
+## 46                                                                 
+## 47                                                                 
+## 48                                                                X
+## 49                                                                 
+## 50                                                                 
+## 51                                                                 
+## 52                                                                 
+## 53                                                                 
+## 54                                                                 
+## 55                                                                 
+##    plymouth gin quinine simple syrup raspberry syrup rye saline solution scotch
+## 1                                                                              
+## 2                                                                              
+## 3             X                                                                
+## 4                                                                              
+## 5                                                                              
+## 6                                                                              
+## 7             X                                                                
+## 8                                                                      X       
+## 9                                                                              
+## 10                                                                     X       
+## 11                                                     X                       
+## 12                                                                            X
+## 13                                                                            X
+## 14                                                                             
+## 15                                                     X                       
+## 16                                                                             
+## 17                                                                     X       
+## 18                                                                     X       
+## 19                                                                     X       
+## 20                                                                             
+## 21                                                                             
+## 22                                                                             
+## 23            X                                    X                           
+## 24                                                                             
+## 25                                                                             
+## 26                                                                             
+## 27                                                     X                       
+## 28                                                                             
+## 29                                                                     X       
+## 30                                                                             
+## 31                                 X                                   X       
+## 32                                                                             
+## 33                                                                             
+## 34                                                                     X       
+## 35                                                                             
+## 36                                                     X                       
+## 37                                                                             
+## 38                                                                             
+## 39                                                                             
+## 40                                                     X                       
+## 41                                                                     X       
+## 42                                                                             
+## 43                                                                             
+## 44                                                                             
+## 45                                                     X                       
+## 46                                                                             
+## 47            X                                                                
+## 48                                                                             
+## 49                                                                            X
+## 50                                                                            X
+## 51                                                                             
+## 52                                                                             
+## 53                                                     X                       
+## 54                                                     X               X       
+## 55                                                                             
+##    simple simple syrup sloe gin sugard -proof rum sugared -proof rye
+## 1                                                                   
+## 2                                                                   
+## 3                                                                   
+## 4                                                                   
+## 5                                                                   
+## 6                                                                   
+## 7                             X                                     
+## 8                                               X                   
+## 9                                                                   
+## 10                                                                 X
+## 11                                                                  
+## 12                                                                  
+## 13                                                                  
+## 14                                                                  
+## 15                                                                  
+## 16                                                                  
+## 17                   X                                              
+## 18                                                                  
+## 19                   X                                              
+## 20                   X                                              
+## 21                                                                  
+## 22                   X                                              
+## 23                                                                  
+## 24                                                                  
+## 25                                                                  
+## 26                   X                                              
+## 27                                                                  
+## 28                   X                                              
+## 29                                                                  
+## 30      X                                                           
+## 31                                                                  
+## 32                                                                  
+## 33                                                                  
+## 34                                                                  
+## 35                                                                  
+## 36                   X                                              
+## 37                                                                  
+## 38                                                                  
+## 39                                                                  
+## 40                                                                  
+## 41                   X                                              
+## 42                                                                  
+## 43                                                                  
+## 44                   X                                              
+## 45                                                                  
+## 46                                                                  
+## 47                   X                                              
+## 48                   X                                              
+## 49                                                                  
+## 50                                                                  
+## 51                   X                                              
+## 52                   X                                              
+## 53                                                                  
+## 54                   X                                              
+## 55                                                                  
+##    sweet vermouth water white cr\u008fme de cacao white mezcal white rum
+## 1                                               X                       
+## 2                                                                       
+## 3                                                                       
+## 4                                                                       
+## 5                                                                      X
+## 6               X                                                       
+## 7               X                                                       
+## 8                     X                                                 
+## 9                     X                                      X          
+## 10                    X                                                 
+## 11                                                                      
+## 12              X                                                       
+## 13              X                                                       
+## 14                                                                      
+## 15                                                                      
+## 16                                                                      
+## 17                    X                                                 
+## 18              X     X                                                 
+## 19                    X                                                 
+## 20                                                                      
+## 21                    X                                                 
+## 22                                                                     X
+## 23                                                                      
+## 24                                                                      
+## 25                                                                      
+## 26                                                                     X
+## 27              X                                                       
+## 28                                                                      
+## 29                    X                                                 
+## 30                    X                                                 
+## 31                    X                                                 
+## 32                                                                      
+## 33              X                                                       
+## 34                                                                     X
+## 35                                                                     X
+## 36                                                                      
+## 37                                                                      
+## 38                                                                      
+## 39              X                                                       
+## 40              X                                                       
+## 41                                                                      
+## 42              X                                                       
+## 43              X                                                       
+## 44                                                                      
+## 45                                                                      
+## 46                                                                      
+## 47                                                                      
+## 48                                                                      
+## 49              X                                                       
+## 50                                                                      
+## 51                                                                      
+## 52                                                                      
+## 53              X                                                       
+## 54                                                                      
+## 55                                                                      
+##    yellow chartreuse
+## 1                   
+## 2                   
+## 3                   
+## 4                   
+## 5                   
+## 6                   
+## 7                   
+## 8                   
+## 9                  X
+## 10                  
+## 11                  
+## 12                  
+## 13                  
+## 14                  
+## 15                  
+## 16                  
+## 17                  
+## 18                  
+## 19                  
+## 20                  
+## 21                  
+## 22                  
+## 23                  
+## 24                  
+## 25                  
+## 26                  
+## 27                  
+## 28                  
+## 29                  
+## 30                  
+## 31                  
+## 32                  
+## 33                  
+## 34                  
+## 35                  
+## 36                  
+## 37                  
+## 38                  
+## 39                  
+## 40                  
+## 41                  
+## 42                  
+## 43                  
+## 44                  
+## 45                  
+## 46                  
+## 47                  
+## 48                  
+## 49                  
+## 50                  
+## 51                  
+## 52                  
+## 53                  
+## 54                  
+## 55                 X</code></pre>
 <p>Congrats, the bar is now officially open!</p>
 <p><img src="data:image/gif;base64,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" width="320" /></p>
 </div>
