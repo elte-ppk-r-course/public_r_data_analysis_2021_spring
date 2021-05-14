@@ -9,14 +9,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(viridis)
-theme_set(theme_bw())
-```
+
 
 # Background story
 
@@ -36,12 +29,19 @@ This is the training dataset of the Titanic dataset from the Kaggle Titanic Chal
 
 ## Metadata
 
-```{r echo = FALSE, warning = FALSE, message = FALSE}
-metadata <- readr::read_tsv(here::here("~/Dokumentumok/3_phd_courses/r/assignment/public_r_data_analysis_2021_spring/data/assignment_6_metadata.tsv"))
 
-metadata %>% 
-  knitr::kable()
-```
+|Variable |Definition                                                        |Notes                                                                                                              |
+|:--------|:-----------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------|
+|survival |Survival                                                          |0 = No, 1 = Yes                                                                                                    |
+|pclass   |Ticket class                                                      |1 = 1st, 2 = 2nd, 3 = 3rd                                                                                          |
+|sex      |Sex                                                               |male or female                                                                                                     |
+|Age      |Age in years                                                      |NA                                                                                                                 |
+|sibsp    |Number of siblings or spouses accompanying the passenger on board |(for example if the passenger was traveling with 2 of his/her siblings and his/her spouse, this number would be 3) |
+|parch    |Number of parents or children accompanying the passenger on board |(for example if the passenger was traveling just with his/her mother, this number would be 1)                      |
+|ticket   |The ID number of the ticket                                       |NA                                                                                                                 |
+|fare     |Passenger fare (in Pounds)                                        |NA                                                                                                                 |
+|cabin    |Cabin number (if any)                                             |NA                                                                                                                 |
+|embarked |Port of Embarkation                                               |C = Cherbourg, Q = Queenstown, S = Southampton                                                                     |
 
 # Task
 
@@ -77,7 +77,8 @@ In your discussion of the findings, briefly interpret the results of the above a
 
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
-```{r}
+
+```r
 titanic_dataset <- haven::read_sav(here::here("~/Dokumentumok/3_phd_courses/r/assignment/public_r_data_analysis_2021_spring/data/assignment_6_dataset.sav")) %>%
   mutate(Survived = as.factor(Survived),
          Pclass = as.factor(Pclass),
@@ -98,7 +99,8 @@ label_survived = c("0" = "Not survived", "1" = "Survived")
 
 ### Survival age
 
-```{r}
+
+```r
 survival_age <- ggplot(titanic_dataset, aes(Sex, Age, color = Survived)) +
   geom_point(alpha = 0.2, size = 7) +
   labs(title = "The age of passengers") +
@@ -110,7 +112,8 @@ survival_age <- ggplot(titanic_dataset, aes(Sex, Age, color = Survived)) +
 
 ### Age freqency by survival
 
-```{r}
+
+```r
 class_freq <- ggplot(titanic_dataset, aes(Age, fill = Sex)) +
   geom_histogram(binwidth = 1) +
   facet_wrap(vars(Pclass), labeller = labeller(Pclass = label_class)) +
@@ -121,10 +124,17 @@ class_freq <- ggplot(titanic_dataset, aes(Age, fill = Sex)) +
 class_freq
 ```
 
+```
+## Warning: Removed 177 rows containing non-finite values (stat_bin).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
 
 ### Age freqency by port of embarkation
 
-```{r}
+
+```r
 port_freq <- ggplot(titanic_dataset, aes(Age, fill = Embarked)) +
   geom_histogram(binwidth = 1) +
   labs(title = "Age of travellers embarked in each port") +
@@ -134,10 +144,16 @@ port_freq <- ggplot(titanic_dataset, aes(Age, fill = Embarked)) +
 port_freq
 ```
 
+```
+## Warning: Removed 177 rows containing non-finite values (stat_bin).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
 ### Survival frequency
 
-```{r}
 
+```r
 survival_freq <- ggplot(titanic_dataset, aes(Age, fill = Survived)) +
   geom_histogram(binwidth = 1) +
   facet_grid(cols = vars(Pclass), rows = vars(Sex), labeller = labeller(Pclass = label_class, Sex = label_sex)) +
@@ -148,9 +164,16 @@ survival_freq <- ggplot(titanic_dataset, aes(Age, fill = Survived)) +
 survival_freq
 ```
 
+```
+## Warning: Removed 177 rows containing non-finite values (stat_bin).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
 ### Survival proportion
 
-```{r}
+
+```r
 survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
   geom_bar(position = "fill") +
   facet_grid(rows = vars(Sex), cols = vars(AgeCategory), labeller = labeller(Sex = label_sex)) +
@@ -163,9 +186,12 @@ survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
 survival_prop
 ```
 
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
 ### Survivel trendline faceted by Sex and Passenger Class
 
-``` {r}
+
+```r
 titanic_dataset_log <- titanic_dataset %>%
 mutate(Survived = as.numeric(as.character(Survived)))
 
@@ -180,13 +206,26 @@ survival_line <- ggplot(titanic_dataset_log, aes(Age, Survived)) +
    )
  
 survival_line
+```
 
 ```
+## `geom_smooth()` using formula 'y ~ x'
+```
+
+```
+## Warning: Removed 177 rows containing non-finite values (stat_smooth).
+```
+
+```
+## Warning: Removed 177 rows containing missing values (geom_point).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 ### Survivel trendline by family members faceted by Sex and Passenger Class
 
-``` {r}
 
+```r
 survival_line <- ggplot(titanic_dataset_log, aes(Family, Survived)) +
    facet_grid(cols = vars(Pclass), rows = vars(Sex), labeller = labeller(Pclass = label_class, Sex = label_sex)) +
    geom_point() +
@@ -198,12 +237,18 @@ survival_line <- ggplot(titanic_dataset_log, aes(Family, Survived)) +
    )
  
 survival_line
+```
 
 ```
+## `geom_smooth()` using formula 'y ~ x'
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 ## Clean the data
 
-```{r}
+
+```r
 clean_titanic_dataset <- titanic_dataset %>%
   select(Survived, Age, Sex, Pclass, Family) %>%
   mutate(Pclass = as.numeric(as.character(Pclass)))
@@ -211,9 +256,21 @@ clean_titanic_dataset <- titanic_dataset %>%
 str(clean_titanic_dataset)
 ```
 
+```
+## tibble[,5] [891 × 5] (S3: tbl_df/tbl/data.frame)
+##  $ Survived: Factor w/ 2 levels "0","1": 1 2 2 2 1 1 1 1 2 2 ...
+##  $ Age     : num [1:891] 22 38 26 35 35 NA 54 2 27 14 ...
+##   ..- attr(*, "format.spss")= chr "F5.2"
+##  $ Sex     : Factor w/ 2 levels "female","male": 2 1 1 1 2 2 2 2 1 1 ...
+##  $ Pclass  : num [1:891] 3 1 3 1 3 3 1 3 3 2 ...
+##  $ Family  : num [1:891] 1 1 0 1 0 0 0 4 2 1 ...
+##   ..- attr(*, "format.spss")= chr "F1.0"
+```
+
 ## Creating a datatable for Sue, Kate, and Leonardo
 
-```{r}
+
+```r
 Name <- c("Kate", "Sue", "Leonardo")
 Age <- c("4", "22", "22")
 Sex <- c("female", "female", "male")
@@ -222,46 +279,93 @@ Survived <- c(1, 0, NA)
 Family <- c("2", "2", "2")
 
 family_data <- data.frame(Name, Survived, Age, Sex, Pclass, Family)
-
 ```
 
 ## Building the null model
 
-```{r}
+
+```r
 null_model <- glm(Survived ~ 1, data = clean_titanic_dataset, family = binomial)
 
 summary(null_model)
 ```
 
+```
+## 
+## Call:
+## glm(formula = Survived ~ 1, family = binomial, data = clean_titanic_dataset)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -0.9841  -0.9841  -0.9841   1.3839   1.3839  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept) -0.47329    0.06889   -6.87  6.4e-12 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 1186.7  on 890  degrees of freedom
+## Residual deviance: 1186.7  on 890  degrees of freedom
+## AIC: 1188.7
+## 
+## Number of Fisher Scoring iterations: 4
+```
+
 ## Building the model
 
-```{r}
+
+```r
 model <- glm(Survived ~ Age +Sex + Pclass + Family, data = clean_titanic_dataset, family = binomial)
 
 summary(model)
 ```
 
+```
+## 
+## Call:
+## glm(formula = Survived ~ Age + Sex + Pclass + Family, family = binomial, 
+##     data = clean_titanic_dataset)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.6783  -0.6609  -0.3969   0.6199   2.4491  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  5.54568    0.54249  10.223  < 2e-16 ***
+## Age         -0.04281    0.00810  -5.285 1.26e-07 ***
+## Sexmale     -2.65962    0.21792 -12.204  < 2e-16 ***
+## Pclass      -1.30259    0.14003  -9.302  < 2e-16 ***
+## Family      -0.19961    0.07341  -2.719  0.00655 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 964.52  on 713  degrees of freedom
+## Residual deviance: 639.37  on 709  degrees of freedom
+##   (177 observations deleted due to missingness)
+## AIC: 649.37
+## 
+## Number of Fisher Scoring iterations: 5
+```
+
 # Check the assumptions
 
-```{r}
 
-```
 
 # Compare the models
 
-```{r}
 
-```
 
 # Calculate odds ratio and confidence interval
 
-```{r}
 
-```
 
 # Report the results
 
-```{r}
 
-```
 
