@@ -1,0 +1,7 @@
+---
+title: "Final Assignment: "Roman Emperors"
+author: "Rebeka Zsoldos"
+output: html_document
+editor_options:
+  chunk_output_type: console
+---
