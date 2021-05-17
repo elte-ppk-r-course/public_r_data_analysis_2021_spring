@@ -16,8 +16,13 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+install.packages("tidyverse")
+install.packages("dplyr")
 library(tidyverse)
 library(dplyr)
+
+install.packages("janitor")
+library(janitor)
 
 
 
@@ -47,7 +52,9 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 
 ```{r}
 #We first separate the ingredients in multiple rows
-cocktail <-  separate_rows(cocktail, ingredients, sep = "<b4/>", convert = TRUE)
+cocktail_s <-  separate_rows(cocktail, ingredients, sep = "<b4/>", convert = TRUE)
+cocktail_s2 <- separate_rows(cocktail_s, ingredients, sep = "<br/>", convert = TRUE)
+cocktail <- separate_rows(cocktail_s2, ingredients, sep = "<br>", convert = TRUE)
 #We can verify all the ingredients are in individual rows
 print(cocktail$ingredients)
 
@@ -58,7 +65,8 @@ print(cocktail$ingredients)
 c_cocktail <-
   cocktail %>%
   mutate(ingredients = gsub(".*oz|[0-9]|bsp|dashes|dash|drop|drops|-proof|\\(.*", "", ingredients)) %>%
-  mutate(ingredients = str_trim(ingredients, side = "left"))
+  mutate(ingredients = str_to_lower(ingredients))%>%
+  mutate(ingredients = str_trim(ingredients, side = "both"))
   
 print(c_cocktail$ingredients)
 
@@ -73,9 +81,9 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 #We select the ingredients row and eliminated duplicated values
 ingredients_l <-  distinct(c_cocktail[,8, drop = FALSE])
 #We order the row alphabetically
-ingredients_list <- ingredients_l[order(ingredients_list$ingredients),]
+ingredients_list <- ingredients_l[order(ingredients_l$ingredients),]
 #List is ready to be sent 
-View(ingredients_list)
+view(ingredients_list)
 
 
 
@@ -87,7 +95,7 @@ How many different ingredients you will need?
 
 ```{r}
 #We count the number of unique occurances
-n_of_ingredients <- n_distinct(ingredients_list)
+n_of_ingredients <- n_distinct(ingredients_l)
 
 print(n_of_ingredients)
 ```
@@ -121,6 +129,8 @@ number_ingredients <- c_cocktail %>%
   
 view(number_ingredients)
 
+n_distinct(c_cocktail$name)
+
 ```
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
@@ -129,10 +139,11 @@ Count all cocktails with only one ingredient, and
 
 ```{r}
 rare_ingredients <- names(table(c_cocktail$ingredients))[table(c_cocktail$ingredients) == 1]
-length(rare_ingredients)
-
 
 view(rare_ingredients)
+# Number of ingredients that appear in only one cocktail
+length(rare_ingredients)
+
 
 
 
@@ -143,14 +154,23 @@ view(rare_ingredients)
 ```{r}
 rare_cocktail <- names(table(c_cocktail$name))[table(c_cocktail$ingredients) == 1]
 
+rare_cocktail <- remove_empty(as.data.frame(rare_cocktail))
 
 view(rare_cocktail)
+
+
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+notrare_cocktails <- names(table(c_cocktail$name))[table(c_cocktail$ingredients) > 1]
+
+notrare_cocktails <- remove_empty(as.data.frame(notrare_cocktails))
+
+view(notrare_cocktails)
+
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -166,6 +186,42 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+matrix_rows <- list(unique(c_cocktail$name))[[1]]
+matrix_columns <- list(unique(c_cocktail$ingredients))[[1]]
+numrows <- length(matrix_rows)
+numcolumns <- length(matrix_columns)
+matrix_values <- list()
+for (cocktail in matrix_rows) {
+  print(cocktail)
+}
+m_cheet <- matrix(1:(numrows*numcolumns), numrows, dimnames = list(c(matrix_rows) , c(matrix_columns)))
+
+view(m_cheet)
+
+
+
+number_ing <- c_cocktail %>%
+  group_by(name)
+
+cocktail_with_ingredients <- list()
+
+for (row in 1:nrow(number_ing)) {
+  ingredient <- number_ing[row, "ingredients"]
+  key <- number_ing[row, "name"]
+  print(key)
+  if(cocktail_with_ingredients[key]) {
+    list_of_ingredients <-  cocktail_with_ingredients[key] 
+  } else {
+    list_of_ingredients <- list(1)
+  }
+  print(length(list_of_ingredients))
+  #list_of_ingredients[length(list_of_ingredients)+1] <- ingredient
+  #cocktail_with_ingredients[1] <- list_of_ingredients
+  #cocktail_with_ingredients[number_ing[row, "name"]] <- list_of_ingredients
+}  
+print(cocktail_with_ingredients)
+  
+view(number_ing)
 
 ```
 
