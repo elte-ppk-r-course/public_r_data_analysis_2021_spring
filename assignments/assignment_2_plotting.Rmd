@@ -20,6 +20,12 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(scales)
+library(viridis)
+library(RColorBrewer)
+
+
+
 ```
 
 ## Task 1: Climbing expeditions
@@ -31,6 +37,24 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bar colors use the viridis palette and light theme.
 
 ```{r}
+climbing <- tt_load("2020-09-22")
+
+expeditions_d <- climbing$expeditions
+
+view(expeditions_d)
+
+expeditions_d %>%
+  mutate(peak_name = as.factor(peak_name)) %>%
+  mutate(peak_name = forcats::fct_lump(peak_name, n = 15)) %>%
+  filter(peak_name != "Other") %>%
+  mutate(peak_name = fct_rev(fct_infreq(peak_name))) %>%
+  ggplot( aes(y = peak_name, fill = season)) +
+    geom_bar() +
+    labs(x = "Number of expeditions", y = NULL, title = "The 15 most popular peaks stacked by season of expedition") +
+    theme_light() +
+    theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+    scale_fill_viridis(discrete = TRUE)
+
 
 ```
 
@@ -45,7 +69,24 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+phds <- tt_load("2019-02-19")
 
+phds_field <- phds$phd_by_field
+
+view(phds_field)
+
+phds_field %>%
+  group_by(broad_field, year) %>%
+  summarize(sphds = sum(n_phds, na.rm = TRUE)) %>%
+  ggplot(aes(x = year, y = sphds, color = broad_field)) +
+  geom_line(size = 1.2) +
+  labs(x = NULL, y = NULL, color = "Broad field", title = "Number of awarded Ph.D.-s in the US by year") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) + 
+  scale_y_continuous(labels = comma_format()) +
+  theme_minimal() +
+  scale_color_brewer(palette = "Dark2")
+
+view(phds_field)
 ```
 
 ## Task 3: Commute in the US
@@ -59,5 +100,49 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+comm_us <- tt_load("2019-11-05")
+
+commute_us <- comm_us$commute
+
+view(commute_us)
+
+commute_usa <- commute_us %>%
+  mutate(state = recode_factor(state, "Ca" = "California", "Massachusett" = "Massachusetts")) %>%
+  group_by(state, mode, state_abb, state_region) %>%
+  summarize(commutes = sum(n, na.rm = TRUE))  %>%
+  spread(mode, commutes) %>%
+  arrange(state_abb)
+
+View(commute_usa)
+
+  ggplot(commute_usa, aes(x = Walk, y = Bike, color = state_region)) +
+  geom_point(size = 2) +
+  scale_x_log10(labels = scales::comma_format()) +
+  scale_y_log10(labels = scales::comma_format(), limits = c(100, 200000)) +
+  geom_text(aes(label= state_abb), color = "black", size = 5, check_overlap = TRUE) +
+  labs(x = "Number of ppl walking to work (log N)",
+       y = "Number of ppl biking to work (log N)",
+       title = "Number of people walking vs. biking to work in each USA state", color = "State region") +
+  theme(aspect.ratio = 1,
+       axis.title.x = element_text(size = 12.5),
+       axis.title.y = element_text(size = 12.5),
+        plot.title = element_text(size = 14, hjust = 0.5))  +
+  theme_light()
+
+  print(commute_usa)
+  
+  
+#data=subset(commute_usa, Walk > 4000 | Bike > 5000)
+
+  #mutate(state = replace(state,state == "CA", "California"))
+  #subset(commute_us, mode == "Bike", select = state, state_abb, state_region)
+  
+  
+
+view(commute_us)
+  
+  
+  
+
 
 ```

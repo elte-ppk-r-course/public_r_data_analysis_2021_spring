@@ -60,6 +60,28 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 
 ```{r}
 
+library(readxl)
+library(tidyverse)
+install.packages("skimr")
+install.packages("psych")
+install.packages("car")
+install.packages("Hmisc")
+install.packages("rstatix")
+install.packages("olsrr")
+library(skimr)
+library(psych)
+library(car)
+library(Hmisc)
+library(rstatix)
+library(olsrr)
+
+pain2 <- read_excel("C:\\Users\\Ma. de Lourdes\\OneDrive - Kormányzati Informatikai Fejlesztési Ügynökség\\UNIVERSIDAD\\PhD\\R Projects\\public_r_data_analysis_2021_spring\\data\\assignment_3_dataset.xlsx",  sheet = 1)
+
+pain_data <- as.data.frame(pain2)
+
+pain_data$sex <- as.factor(pain_data$sex)
+
+
 ```
 
 ## Data and model diagnostics 
@@ -69,6 +91,24 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
+# We explore the dataset. Check the type of variables, we skim it, check minimum, maximum and mean values of each variable 
+
+view(pain_data)
+str(pain_data)
+summary(pain_data)
+sum(is.na(pain_data))
+
+skim(pain_data)
+
+
+# We create a scatterplot to visualize the relationship between age and pain, adding sex as well
+ggplot(data = pain_data) +
+  geom_point(mapping = aes(x = age, y = pain, color = sex))
+
+ggplot(pain_data, aes(x = pain_cat, y = pain, color = sex)) +
+  geom_point()  +
+  geom_smooth(method = "lm")
+
 
 ```
 
@@ -77,6 +117,38 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
+# After exploring the dataset we identified several coding errors. We clean the data of what we interpreted as typing errors
+pain_data_c <- pain_data %>%
+  
+  mutate(sex = recode_factor(sex, "woman" = "female"))
+
+#We correct values in pain and mindfulness variables, each maximum value is 10 and the other is 6 respectively 
+
+pain_data_c$pain[pain_data_c$pain == 50] <- 5
+pain_data_c$mindfulness[pain_data_c$mindfulness == 6.22] <- 6
+
+view(pain_data_c)
+summary(pain_data_c)
+str(pain_data_c)
+
+# We plot again some of variables to see the differences after correcting coding errors
+
+ggplot(data = pain_data_c) +
+  geom_point(mapping = aes(x = age, y = pain, color = sex))
+
+ggplot(pain_data_c, aes(x = cortisol_serum, y = pain_cat, fill = sex)) +
+  geom_boxplot()  
+
+ggplot(pain_data_c, aes(x = cortisol_serum, y = pain)) +
+  geom_point(color = "aquamarine4") +
+  facet_wrap(~ sex)
+
+ggplot(pain_data_c, aes(x = pain_cat, y = cortisol_serum, size = pain)) +
+  geom_point(color = "aquamarine4") +
+  facet_wrap(~ sex)
+
+
 
 ```
 
@@ -87,6 +159,34 @@ In order to test the more complex model for outliers and to test the assumptions
 
 ```{r}
 
+# Step 1 Block 1 : Nested model
+
+s_model <- lm(pain ~ age + sex, data = pain_data_c)
+nrow(model.frame(s_model))
+summary(s_model)
+
+
+c_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_serum + cortisol_saliva + mindfulness, data = pain_data_c)
+nrow(model.frame(c_model))
+summary(c_model)
+
+
+
+
+#  Nested model comparision
+
+anova(s_model, c_model)
+
+# Change in R squared , incremental variance explained
+
+summary(c_model)$r.squared - summary(s_model)$r.squared
+
+pain_numeric <- subset(pain_data_c, select = c(pain, STAI_trait, pain_cat, cortisol_serum, cortisol_saliva, mindfulness))
+
+view(pain_numeric)
+
+pairs.panels(pain_numeric, col = "red")
+
 ```
 
 #### Checking for influential outliers
@@ -94,6 +194,45 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+pain_data_c %>%
+  identify_outliers(pain)
+
+cooksd <- cooks.distance(c_model)
+
+# Plot the Cook's Distance using the traditional 4/n criterion
+sample_size <- nrow(pain_data_c)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4/sample_size, col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4/sample_size, names(cooksd),""), col="red")  # add labels
+
+# Defining outliers based on 4/n criteria; 
+
+
+influential <- as.numeric(names(cooksd)[(cooksd > (4/sample_size))])
+
+View(pain_data_c[influential, ])
+
+pain_data2 <- pain_data_c[-influential, ]
+head(pain_data2)
+
+nrow(pain_data2)
+
+pain_no_out <- as.data.frame(pain_data2)
+
+
+view(pain_no_out)
+
+
+######
+
+c_model_no <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_serum + cortisol_saliva + mindfulness, data = pain_no_out)
+nrow(model.frame(c_model_no))
+summary(c_model_no)
+
+outlier_values <- boxplot.stats(pain_no_out$pain_cat)$out  # outlier values.
+boxplot(pain_no_out$pain_cat, main="Pressure Height", boxwex=0.1)
+mtext(paste("Outliers: ", paste(outlier_values, collapse=", ")), cex=0.6)
 
 ```
 
@@ -103,18 +242,51 @@ Check the normality assumption.
 
 ```{r}
 
+#The Shapiro-Wilk statistic associated with these data is W .95, indicating that no significant departures from normality were detected (p 8.47).
+shapiro.test(pain_no_out$pain)
+
+# However when plotting normal distribution seems slightly violated
+
+qqnorm(pain_no_out$pain,main="QQ plot of normal data",pch=19)
+
+hist(pain_no_out$pain,probability=T, main="Histogram of normal
+data",xlab="Approximately normally distributed data")
+lines(density(pain_no_out$pain),col=2)
+
+
+# Plot for detecting violation of normality assumption
+ols_plot_resid_qq(c_model_no)
+
+plot(c_model_no, 2)
+# Test for detecting violation of normality assumption.
+
+ols_test_normality(c_model_no)
+
+
+#ols_test_correlation(c_model)
+#ols_plot_resid_hist(c_model)
 ```
 
 Check the linearity assumption.
 
 ```{r}
+# Plot to check linearity
+ols_plot_resid_fit(c_model_no)
+
+plot(c_model_no, 1)
+
+# It doesnt seem to be linear, however we have as predictors factors and this is the model with outliers.
 
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+ols_plot_resid_fit(c_model_no)
 
+plot(c_model_no, 3)
+
+ols_test_breusch_pagan(c_model_no)
 ```
 
 Check the multicollinearity assumption.
@@ -127,6 +299,14 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 
 ```{r}
 
+ols_coll_diag(c_model_no)
+
+ols_vif_tol(c_model_no)
+
+vif(c_model_no)
+
+# Cortisol serum and cortisol saliva have high indices of multicollarity, this means that they are igly correlated predictors, its necesarry to remover one for a better model fit. We keep cortisol saliva
+
 ```
 
 ### Making decision based on model diagnostics
@@ -134,13 +314,46 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
-
+c_modelupdate <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_saliva + mindfulness, data = pain_data_c)
+nrow(model.frame(c_modelupdate))
+summary(c_modelupdate)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+cooksd2 <- cooks.distance(c_modelupdate)
 
+# Plot the Cook's Distance using the traditional 4/n criterion
+sample_size2 <- nrow(pain_data_c)
+
+plot(cooksd2, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4/sample_size2, col="red")  # add cutoff line
+text(x=1:length(cooksd2)+1, y=cooksd, labels=ifelse(cooksd2>4/sample_size, names(cooksd2),""), col="red")  # add labels
+
+# Defining outliers based on 4/n criteria; 
+
+
+influential2 <- as.numeric(names(cooksd2)[(cooksd2 > (4/sample_size2))])
+
+View(pain_data_c[influential2, ])
+
+pain_data3 <- pain_data_c[-influential2, ]
+head(pain_data3)
+
+nrow(pain_data3)
+
+pain_no_out2 <- as.data.frame(pain_data3)
+
+view(pain_no_out2)
+
+c_modelupdate_no <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_saliva + mindfulness, data = pain_no_out2)
+nrow(model.frame(c_modelupdate_no))
+summary(c_modelupdate_no)
+
+s_model2 <- lm(pain ~ age + sex, data = pain_no_out2)
+nrow(model.frame(s_model))
+summary(s_model2)
 ```
 
 #### Checking assumptions of the updated model
