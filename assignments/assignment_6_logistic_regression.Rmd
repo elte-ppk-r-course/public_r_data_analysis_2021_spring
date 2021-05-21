@@ -205,11 +205,8 @@ survival_line
 
 ```{r}
 clean_titanic_dataset <- titanic_dataset %>%
-<<<<<<< HEAD
   select(Survived, Age, Sex, Pclass, SibSp, Parch, Family) %>%
-=======
   select(Survived, Age, Sex, Pclass, Family) %>%
->>>>>>> 2772be47cd453ad24dce3d449d77e852eda77df1
   mutate(Pclass = as.numeric(as.character(Pclass)))
 
 str(clean_titanic_dataset)
@@ -240,13 +237,11 @@ summary(null_model)
 ## Building the model
 
 ```{r}
-<<<<<<< HEAD
-model <- glm(Survived ~ Age + Sex + Pclass + SibSp, data = clean_titanic_dataset, family = binomial)
-=======
-model <- glm(Survived ~ Age +Sex + Pclass + Family, data = clean_titanic_dataset, family = binomial)
->>>>>>> 2772be47cd453ad24dce3d449d77e852eda77df1
+model1 <- glm(Survived ~ Age + Sex + Pclass + SibSp, data = clean_titanic_dataset, family = binomial)
+model2 <- glm(Survived ~ Age +Sex + Pclass + Family, data = clean_titanic_dataset, family = binomial)
 
-summary(model)
+summary(model1)
+summary(model2)
 ```
 
 # Check the assumptions
