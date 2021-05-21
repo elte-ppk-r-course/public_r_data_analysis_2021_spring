@@ -5,3 +5,46 @@ output: html_document
 editor_options:
   chunk_output_type: console
 ---
+## Background,
+
+The Roman Emperors ruled the Roman Empire from 27 BC till 395 AC.
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+## Importing Data
+
+```{r}
+emperors_raw <- readr::read_csv(url("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-08-13/emperors.csv"), na = c("NA", "Unknown"))
+
+```
+
+## Cleaning Data
+
+``` {r}
+emperors <- emperors_raw %>%
+  mutate(
+    birth_cty = as.factor(birth_cty),
+    birth_prv = as.factor(birth_prv),
+    rise = as.factor(rise),
+    cause = as.factor(cause),
+    killer = as.factor(killer),
+    dynasty = as.factor(dynasty),
+    era = as.factor(era)
+  ) %>%
+  select(-name_full, -notes, - verif_who)
+
+```
+
+``` {r}
+
+dynasties <- ggplot(emperors, aes(name, fill = dynasty)) +
+  geom_bar()
+
+dynasties
+
+```
