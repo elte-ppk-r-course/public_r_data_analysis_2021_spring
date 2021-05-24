@@ -112,15 +112,38 @@ commute_usa <- commute_us %>%
   summarize(commutes = sum(n, na.rm = TRUE))  %>%
   spread(mode, commutes) %>%
   arrange(state_abb)
-
 View(commute_usa)
 
-  ggplot(commute_usa, aes(x = Walk, y = Bike, color = state_region)) +
+
+
+############################
+#commute_usa$state_abb<-
+ # rownames(commute_usa)
+#newlab<- 
+ # subset(commute_usa, state_abb
+ #        %in% c("AK", "AL"))
+
+#commute_usa$Walk<-as.numeric(commute_usa$Walk)
+#commute_usa$Bike<-as.numeric(commute_usa$Bike)
+
+#ggplot(commute_usa, aes(x = Walk, y = Bike, 
+ #     color = state_region)) +
+#  geom_point(size = 2) +
+ # scale_x_log10(labels = scales::comma_format()) +
+#  scale_y_log10(labels = scales::comma_format(), limits = c(100, 200000)) +
+ #    geom_text(data= newlab, color = "black", size #= 4, vjust=1.5) +
+  
+  #############################
+  
+  
+  
+   ggplot(commute_usa, aes(x = Walk, y = Bike, color = state_region)) +
   geom_point(size = 2) +
   scale_x_log10(labels = scales::comma_format()) +
   scale_y_log10(labels = scales::comma_format(), limits = c(100, 200000)) +
-  geom_text(aes(label= state_abb), color = "black", size = 5, check_overlap = TRUE) +
-  labs(x = "Number of ppl walking to work (log N)",
+     geom_text(aes(label= state_abb), color = "black", size = 4, check_overlap = TRUE) +
+ 
+ labs(x = "Number of ppl walking to work (log N)",
        y = "Number of ppl biking to work (log N)",
        title = "Number of people walking vs. biking to work in each USA state", color = "State region") +
   theme(aspect.ratio = 1,
@@ -134,7 +157,7 @@ View(commute_usa)
   
 #data=subset(commute_usa, Walk > 4000 | Bike > 5000)
 
-  #mutate(state = replace(state,state == "CA", "California"))
+ # mutate(state = replace(state,state == "CA", "California"))
   #subset(commute_us, mode == "Bike", select = state, state_abb, state_region)
   
   
