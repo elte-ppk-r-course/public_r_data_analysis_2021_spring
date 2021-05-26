@@ -15,6 +15,8 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(viridis)
+
+theme_set(theme_light())
 ```
 
 ## Importing Data
@@ -28,7 +30,7 @@ emperors_raw <- readr::read_csv(url("https://raw.githubusercontent.com/rfordatas
 
 
 ``` {r}
-emperors <- emperors_raw %>%
+emperors_raw <- emperors_raw %>%
   mutate(
     birth_cty = as.factor(birth_cty),
     birth_prv = as.factor(birth_prv),
@@ -44,7 +46,7 @@ emperors <- emperors_raw %>%
            ) %>%
   select(-name_full, -notes, - verif_who)
 
-emperors_new <- emperors %>%
+emperors <- emperors_raw %>%
   mutate(
     birth_y = as.numeric(format(birth, '%Y')),
     death_y = as.numeric(format(death, '%Y')),
@@ -65,7 +67,7 @@ The emperors rised to and fall out of power by many reasons, so I investigate th
 
 ``` {r}
 
-rise_emperors <- emperors_new %>%
+rise_emperors <- emperors %>%
   ggplot(aes(reign_start_y, rise, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(-26, 305, 395),
@@ -75,7 +77,7 @@ rise_emperors <- emperors_new %>%
   labs(title = "The Rise of Emperors") +
   scale_color_viridis_d()
 
-fall_emperors <- emperors_new %>%
+fall_emperors <- emperors %>%
   ggplot(aes(reign_end_y, cause, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(14, 305, 395),
@@ -90,14 +92,13 @@ rise_emperors
 
 fall_emperors
 
-rise_and_fall <- emperors_new %>%
+rise_and_fall <- emperors %>%
   count(rise, cause)
 
-rise_and_fall2 <- emperors_new %>%
+rise_and_fall2 <- emperors %>%
   ggplot(aes(rise, fill = cause)) +
   geom_bar(width = 0.3) +
   coord_flip() +
-  theme_light() +
   theme(legend.position = "bottom") +
   xlab("The rise of the emperors") +
   ylab(NULL) +
@@ -115,28 +116,20 @@ rise_and_fall2
 The age of emperors and the duration of the raign varied. So I take a look at how they relate to each other. 
 
 ``` {r}
-age_and_long <- emperors_new %>%
-  ggplot(aes(age_reign_start, reign_long_y, color = rise)) +
+age_and_long <- emperors %>%
+  ggplot(aes(age_reign_start, reign_long_y)) +
   geom_point() +
-  geom_smooth(
-     method = "lm", 
-     color = "blue",
-     se = TRUE
-   ) +
+  geom_smooth() +
   theme_light() +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   xlab("The age of the emperor when rising to power") +
   ylab("Duration of the reign") +
   scale_color_viridis(discrete = TRUE, na.value = "grey")
 
-death_and_long <- emperors_new %>%
-  ggplot(aes(age_reign_end, reign_long_y, color = cause)) +
+death_and_long <- emperors %>%
+  ggplot(aes(age_reign_end, reign_long_y)) +
   geom_point() +
-  geom_smooth(
-     method = "lm", 
-     color = "blue",
-     se = TRUE
-   ) +
+  geom_smooth() +
   theme_light() +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   xlab("The age of the emperor when his reing ended") +
@@ -174,7 +167,7 @@ died_by
 
 ```
 
-## Recoding the data
+## Recoding the data and prepare for the preictive models
 
 Filter the data for the Principate era only as in the Dominate era there were 4 rulers at once
 Recode the variable Cause:
@@ -187,8 +180,11 @@ Remove datas with missing variable
 
 
 ```{r}
+emperors_rise <- emperors %>%
+  filter(rise == "Purchase" | rise == "Election") %>%
+  select(index, name, era)
 
-emperors_recoded <- emperors_new %>%
+emperors_principate <- emperors %>%
   filter(era == "Principate") %>%
   select(-birth, -death, -birth_cty, -birth_prv, -reign_start, -reign_end, -era) %>%
   mutate(
@@ -197,65 +193,18 @@ emperors_recoded <- emperors_new %>%
     died_by_force = recode(cause_recoded, "Forced" = 1, "Battle" = 0, "Natural Causes" = 0),
     died_by_battle = recode(cause_recoded, "Forced" = 0, "Battle" = 1, "Natural Causes" = 0),
     died_naturally = recode(cause_recoded, "Forced" = 0, "Battle" = 0, "Natural Causes" = 1)
-    ) 
-
-died_by2 <- emperors_recoded %>%
-  filter(cause != "NA") %>%
-  ggplot(aes(cause_recoded, fill = killer_recoded)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme_light() +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  xlab(NULL) +
-  ylab(NULL) +
-  labs(title = "The Cause of Death Among the Roman Emperors in the Principate Era") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey")
-
-died_by2
-
-killer_and_rise1 <- emperors_recoded %>%
-  ggplot(aes(killer_recoded, fill = rise)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme_light() +
-  theme(legend.position = "bottom") +
-  xlab("The killer of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Rise and Killing of the Roman Emperors in the Principate Era #1") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The rise of the emperors")
-
-killer_and_rise1
-
-killer_and_rise2 <- emperors_recoded %>%
-  ggplot(aes(rise, fill = killer_recoded)) +
-  geom_bar(width = 0.3) +
-  theme_light() +
-  theme(legend.position = "bottom") +
-  xlab("The rise of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Rise and Killing of the Roman Emperors in the Principate Era #1") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The killer of the emperors")
-
-killer_and_rise2
-```
-
-## Tidy the data
-
-```{r}
-emperors_rise <- emperors_recoded %>%
-  filter(rise == "Purchase") %>%
-  select(index, name)
-
-emperors_rise
-
-emperors_recoded_new <- emperors_recoded %>%
+    ) %>%
   slice(-c(20)) %>%
-  select(-cause, -killer, - birth_y, -death_y) %>%
-  select(index, name, rise, cause_recoded, killer_recoded, everything())
-  
+  select(-cause, -killer, - birth_y, -death_y, index, name, rise, cause_recoded, killer_recoded, everything()) %>%
+  drop_na(cause_recoded)
 ```
+
+
 
 ## Probabilities of dying by force, battle, or natural causes
+
+Kérdések: ha egy bizonyos idő eltelik, akkor el teszik-e az uralkodót láb alól?
+mi a predikciója az erővel való meghalásnak
 
 ``` {r}
 #emperors_recoded_forced <- emperors_recoded %>%
