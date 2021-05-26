@@ -48,16 +48,16 @@ emperors_raw <- emperors_raw %>%
 
 emperors <- emperors_raw %>%
   mutate(
-    birth_y = as.numeric(format(birth, '%Y')),
-    death_y = as.numeric(format(death, '%Y')),
-    reign_start_y = as.numeric(format(reign_start, '%Y')),
-    reign_end_y = as.numeric(format(reign_end, '%Y'))) %>%
+    birth_year = as.numeric(format(birth, '%Y')),
+    death_year = as.numeric(format(death, '%Y')),
+    reign_start_year = as.numeric(format(reign_start, '%Y')),
+    reign_end_year = as.numeric(format(reign_end, '%Y'))) %>%
   mutate(
-    birth_y = ifelse(birth_y > death_y, (birth_y * -1), (birth_y * 1)),
-    reign_start_y = ifelse(reign_start_y > reign_end_y, (reign_start_y * -1), (reign_start_y * 1)),
-    age_reign_start = reign_start_y - birth_y,
-    age_reign_end = reign_end_y - birth_y,
-    reign_long_y = reign_end_y - reign_start_y)
+    birth_year = ifelse(birth_year > death_year, (birth_year * -1), (birth_year * 1)),
+    reign_start_year = ifelse(reign_start_year > reign_end_year, (reign_start_year * -1), (reign_start_year * 1)),
+    age_reign_start = reign_start_year - birth_year,
+    age_reign_end = reign_end_year - birth_year,
+    reign_long_year = reign_end_year - reign_start_year)
 ```
 
 
@@ -68,7 +68,7 @@ The emperors rised to and fall out of power by many reasons, so I investigate th
 ``` {r}
 
 rise_emperors <- emperors %>%
-  ggplot(aes(reign_start_y, rise, color = dynasty, shape = era)) +
+  ggplot(aes(reign_start_year, rise, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(-26, 305, 395),
                    labels = c("26 B.C.", "305 A.D.", "395 A.D.")) +
@@ -78,7 +78,7 @@ rise_emperors <- emperors %>%
   scale_color_viridis_d()
 
 fall_emperors <- emperors %>%
-  ggplot(aes(reign_end_y, cause, color = dynasty, shape = era)) +
+  ggplot(aes(reign_end_year, cause, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(14, 305, 395),
                    labels = c("14 A.D.", "305 A.D.", "395 A.D.")) +
@@ -108,45 +108,6 @@ rise_and_fall2 <- emperors %>%
 print.data.frame(rise_and_fall)
 rise_and_fall2
 
-```
-
-
-## The duration of the reign
-
-The age of emperors and the duration of the raign varied. So I take a look at how they relate to each other. 
-
-``` {r}
-age_and_long <- emperors %>%
-  ggplot(aes(age_reign_start, reign_long_y)) +
-  geom_point() +
-  geom_smooth() +
-  theme_light() +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  xlab("The age of the emperor when rising to power") +
-  ylab("Duration of the reign") +
-  scale_color_viridis(discrete = TRUE, na.value = "grey")
-
-death_and_long <- emperors %>%
-  ggplot(aes(age_reign_end, reign_long_y)) +
-  geom_point() +
-  geom_smooth() +
-  theme_light() +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  xlab("The age of the emperor when his reing ended") +
-  ylab("Duration of the reign") +
-  scale_color_viridis(discrete = TRUE, na.value = "grey")
-
-age_and_long
-death_and_long
-```
-
-## The death of emperors
-
-The emperors reign ended by many cause and many killers
-
-``` {r}
-
-
 death_types <- emperors %>%
   count(cause, killer)
 
@@ -167,7 +128,38 @@ died_by
 
 ```
 
-## Recoding the data and prepare for the preictive models
+
+## The duration of the reign
+
+The age of emperors and the duration of the raign varied. So I take a look at how they relate to each other. 
+
+``` {r}
+age_and_long <- emperors %>%
+  ggplot(aes(age_reign_start, reign_long_year)) +
+  geom_point() +
+  geom_smooth() +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  xlab("The age of the emperor when rising to power") +
+  ylab("Duration of the reign") +
+  scale_color_viridis(discrete = TRUE, na.value = "grey")
+
+death_and_long <- emperors %>%
+  ggplot(aes(age_reign_end, reign_long_year)) +
+  geom_point() +
+  geom_smooth() +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  xlab("The age of the emperor when his reing ended") +
+  ylab("Duration of the reign") +
+  scale_color_viridis(discrete = TRUE, na.value = "grey")
+
+age_and_long
+death_and_long
+```
+
+
+## Recoding the data and prepare it for the predictive models
 
 Filter the data for the Principate era only as in the Dominate era there were 4 rulers at once
 Recode the variable Cause:
@@ -177,10 +169,11 @@ Recode the variable Killers
 -- Make one category from Aneurism, Heart Failure: Health
 -- Make one category from Lightning, Fire: Natural disaster
 Remove datas with missing variable
+Remove datas when rising by Purchase or Election
 
 
 ```{r}
-emperors_rise <- emperors %>%
+emperors %>%
   filter(rise == "Purchase" | rise == "Election") %>%
   select(index, name, era)
 
@@ -195,7 +188,7 @@ emperors_principate <- emperors %>%
     died_naturally = recode(cause_recoded, "Forced" = 0, "Battle" = 0, "Natural Causes" = 1)
     ) %>%
   slice(-c(20)) %>%
-  select(-cause, -killer, - birth_y, -death_y, index, name, rise, cause_recoded, killer_recoded, everything()) %>%
+  select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year) %>%
   drop_na(cause_recoded)
 ```
 
