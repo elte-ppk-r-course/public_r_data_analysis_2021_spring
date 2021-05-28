@@ -57,7 +57,8 @@ emperors <- emperors_raw %>%
     reign_start_year = ifelse(reign_start_year > reign_end_year, (reign_start_year * -1), (reign_start_year * 1)),
     age_reign_start = reign_start_year - birth_year,
     age_reign_end = reign_end_year - birth_year,
-    reign_long_year = reign_end_year - reign_start_year)
+    reign_long_year = reign_end_year - reign_start_year,
+    century = reign_end_year %/ 100)
 ```
 
 
@@ -113,7 +114,7 @@ death_types <- emperors %>%
 
 died_by <- emperors %>%
   filter(cause != "NA") %>%
-  ggplot(aes(cause, fill = killer)) +
+  ggplot(aes(fct_rev(cause), fill = killer)) +
   geom_bar(width = 0.3) +
   coord_flip() +
   theme_light() +
@@ -136,8 +137,9 @@ The age of emperors and the duration of the raign varied. So I take a look at ho
 ``` {r}
 age_and_long <- emperors %>%
   ggplot(aes(age_reign_start, reign_long_year)) +
-  geom_point() +
-  geom_smooth() +
+  geom_point(alpha = 0.2, color = "red") +
+  geom_text(aes(label = name), size= 3, check_overlap = TRUE) +
+  geom_smooth(se = FALSE) +
   theme_light() +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   xlab("The age of the emperor when rising to power") +
@@ -146,8 +148,9 @@ age_and_long <- emperors %>%
 
 death_and_long <- emperors %>%
   ggplot(aes(age_reign_end, reign_long_year)) +
-  geom_point() +
-  geom_smooth() +
+  geom_point(alpha = 0.2, color = "red") +
+  geom_text(aes(label = name), size= 3, check_overlap = TRUE) +
+  geom_smooth(se = FALSE) +
   theme_light() +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   xlab("The age of the emperor when his reing ended") +
@@ -161,21 +164,27 @@ death_and_long
 
 ## Recoding the data and prepare it for the predictive models
 
-Filter the data for the Principate era only as in the Dominate era there were 4 rulers at once
-Recode the variable Cause:
--- Make one category form Captivity and Died in Battle: Battle
--- Make one category from Assassination, Suicide, Execution as the Killers are similar related to these categories: Forced
-Recode the variable Killers
--- Make one category from Aneurism, Heart Failure: Health
--- Make one category from Lightning, Fire: Natural disaster
-Remove datas with missing variable
-Remove datas when rising by Purchase or Election
+Filtering the data for the Principate era only as in the Dominate era there were 4 rulers at once
+Recoding the variable Cause:
+-- Making one category form Captivity and Died in Battle: Battle
+-- Making one category from Assassination, Suicide, Execution: Forced
+Recoding the variable Killers
+-- Making one category from Aneurism and Heart Failure: Health
+-- Making one category from Lightning, Fire: Natural disaster
+Removing missing datas in the variable Cause
+Removing the emperors rising by Purchase or Election??
 
 
 ```{r}
 emperors %>%
   filter(rise == "Purchase" | rise == "Election") %>%
-  select(index, name, era)
+  select(index, name, era) %y%
+  view()
+
+emperors %>%
+  group_by(rise) %>%
+  count(killer) %>%
+  view()
 
 emperors_principate <- emperors %>%
   filter(era == "Principate") %>%
@@ -187,9 +196,32 @@ emperors_principate <- emperors %>%
     died_by_battle = recode(cause_recoded, "Forced" = 0, "Battle" = 1, "Natural Causes" = 0),
     died_naturally = recode(cause_recoded, "Forced" = 0, "Battle" = 0, "Natural Causes" = 1)
     ) %>%
-  slice(-c(20)) %>%
-  select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year) %>%
-  drop_na(cause_recoded)
+  select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year)
+
+rise_and_fall_principate <- emperors_principate %>%
+  ggplot(aes(rise, fill = cause_recoded)) +
+  geom_bar(width = 0.3) +
+  coord_flip() +
+  theme(legend.position = "bottom") +
+  xlab("The rise of the emperors") +
+  ylab(NULL) +
+  labs(title = "The Rise and Fall of the Roman Emperors in the Principate") +
+  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
+
+
+rise_and_fall_principate
+
+rise_and_fall_principate2 <- emperors_principate %>%
+  ggplot(aes(rise, fill = killer_recoded)) +
+  geom_bar(width = 0.3) +
+  coord_flip() +
+  theme(legend.position = "bottom") +
+  xlab("The rise of the emperors") +
+  ylab(NULL) +
+  labs(title = "The Rise and Death of the Roman Emperors in the Principate") +
+  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The killers")
+
+rise_and_fall_principate2
 ```
 
 
@@ -200,14 +232,38 @@ Kérdések: ha egy bizonyos idő eltelik, akkor el teszik-e az uralkodót láb a
 mi a predikciója az erővel való meghalásnak
 
 ``` {r}
-#emperors_recoded_forced <- emperors_recoded %>%
-  #filter(cause = "Forced")
+emperors_principate %>%
+  count(reign_long_year, died_by_force, died_by_battle, died_naturally) %>%
+  view()
 
-#model2 <- glm(killer  ~ rise + reign_long_y + age_reign_start + era + dynasty, data = emperors_recoded, family = "gaussian")
+model_forced <- glm(died_by_force ~ rise + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
+
+summary(model_forced)
+
+model_natural <- glm(died_naturally ~ rise + age_reign_start + reign_long_year, data = emperors_principate, family = "binomial")
+
+summary(model_natural)
+
+model_battle <- glm(died_by_battle ~ rise + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
+
+summary(model_battle)
 
 ```
 
-## Predicting to be fall by force, battle, or natural causes
+## Predicting the killers
+
+As the plots shows the "biggest" killers in the Romanian Emperor were the senate, the Praetorian Guard, the Emperor's Army and another person who wanted to be Emperor.
+So whom we should be careful of?
+
+``` {r}
+emperors_principate_forced <- emperors_principate %>%
+  filter(cause_recoded == "Forced")
+
+model_killer <- glm(died_by_force ~ killer_recoded + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
+
+summary(model_killer)
+
+```
 
 ## Predicting the killer when falling by force
 
