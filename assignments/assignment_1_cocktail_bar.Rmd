@@ -43,7 +43,6 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 ```{r}
 cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
 
-
 ```
 
 ## 2. Transform the data table and clean the ingredient variable!
@@ -186,43 +185,32 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
+view(cocktail)
+
 matrix_rows <- list(unique(c_cocktail$name))[[1]]
 matrix_columns <- list(unique(c_cocktail$ingredients))[[1]]
 numrows <- length(matrix_rows)
 numcolumns <- length(matrix_columns)
 matrix_values <- list()
-for (cocktail in matrix_rows) {
-  print(cocktail)
-}
-m_cheet <- matrix(1:(numrows*numcolumns), numrows, dimnames = list(c(matrix_rows) , c(matrix_columns)))
 
-view(m_cheet)
-
-
-
-number_ing <- c_cocktail %>%
-  group_by(name)
-
-cocktail_with_ingredients <- list()
-
-for (row in 1:nrow(number_ing)) {
-  ingredient <- number_ing[row, "ingredients"]
-  key <- number_ing[row, "name"]
-  print(key)
-  if(cocktail_with_ingredients[key]) {
-    list_of_ingredients <-  cocktail_with_ingredients[key] 
-  } else {
-    list_of_ingredients <- list(1)
+# We set the Matrix values
+i <- 1
+for (ingredient in matrix_columns) {
+  for (c in matrix_rows) {
+    c_ingredients = (cocktail %>% filter(name == c))['ingredients']
+    if(grepl(tolower(ingredient), tolower(c_ingredients))) {
+      matrix_values[[i]] <- 'X'
+    } else {
+      matrix_values[[i]] <- ''
+    }
+    i <- i + 1
   }
-  print(length(list_of_ingredients))
-  #list_of_ingredients[length(list_of_ingredients)+1] <- ingredient
-  #cocktail_with_ingredients[1] <- list_of_ingredients
-  #cocktail_with_ingredients[number_ing[row, "name"]] <- list_of_ingredients
-}  
-print(cocktail_with_ingredients)
-  
-view(number_ing)
+}
+# We create Matrix
+cocktail_matrix <- matrix(matrix_values, numrows, dimnames = list(c(matrix_rows) , c(matrix_columns)))
 
+view(cocktail_matrix)
 ```
 
 
