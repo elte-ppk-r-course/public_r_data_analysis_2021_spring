@@ -59,7 +59,13 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+library(readxl)
+library(tidyverse)
+library(psych)
+library(car)
+library(broom)
 
+pain <- read_excel("E:/Google Drive UMM/PhD ELTE/Semester 2/R programming/git/public_r_data_analysis_2021_spring/data/assignment_3_dataset.xlsx")
 ```
 
 ## Data and model diagnostics 
@@ -69,15 +75,21 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
-
+glimpse(pain)
+summary(pain)
+colSums(is.na(pain))
 ```
+Based on the data structure above, sex variable is need to be adjusted based on the nature of the data. After I changed sex into factor, I found there is coding error. It was written "woman", but it should be "female".
 
 #### Correct coding errors
 
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
-
+pain <- pain %>%
+  mutate(sex = as.factor(sex)) %>% 
+  mutate(sex = recode_factor(sex, "woman" = "female"))
+summary(pain)
 ```
 
 ### Model diagnostics
@@ -86,7 +98,8 @@ If you find values in the dataset during the EDA, that are not correct based on 
 In order to test the more complex model for outliers and to test the assumptions first build the model.
 
 ```{r}
-
+complex_mod <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = pain)
+summary(complex_mod)
 ```
 
 #### Checking for influential outliers
@@ -94,7 +107,16 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+cooksd <- cooks.distance(complex_mod)
 
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")
+abline(h = 3*mean(cooksd, na.rm=T), col="red")
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+
+pain_final <- pain[-142, ]
+
+complex_mod_clean <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = pain_final)
+summary(complex_mod_clean)
 ```
 
 #### Checking assumptions
@@ -102,20 +124,24 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
-
+plot(complex_mod_clean, which = 2)
 ```
+In the plot above we can see that the residuals are roughly normally distributed.
+
 
 Check the linearity assumption.
 
 ```{r}
-
+plot(complex_mod_clean, which = 1)
 ```
+The plot above indicates that there is no pattern in the residual plot. This suggests that we can assume linear relationship between the predictors and the outcome variables.
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
-
+plot(complex_mod_clean, which = 3)
 ```
+This plot shows if residuals are spread equally along the ranges of predictors. It can be seen that the variances of the residual points doesn't increase with the value of the fitted outcome variable, suggesting constant variances in the residuals errors (or heteroscedasticity).
 
 Check the multicollinearity assumption.
 
@@ -126,66 +152,102 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
-
+vif(complex_mod_clean)
+cor.test(pain_final$cortisol_serum, pain_final$cortisol_saliva)
 ```
+VIF of cortisol_serum adn cortisol_saliva are above 5.Pearson's correlation coeficient between those variables are high, above 0.90. Thus, I decide to drop one variable which has lower effect from previous regression analysis which is cortisol_serum and keep cortisol_saliva.
 
 ### Making decision based on model diagnostics
 
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
-
+complex_mod_final <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_saliva, data = pain_final)
+summary(complex_mod_final)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+cooksd2 <- cooks.distance(complex_mod_final)
 
+plot(cooksd2, pch="*", cex=2, main="Influential Obs by Cooks distance")
+abline(h = 3*mean(cooksd2, na.rm=T), col="red")
+text(x=1:length(cooksd2)+1, y=cooksd2, labels=ifelse(cooksd2>4*mean(cooksd2, na.rm=T),names(cooksd2),""), col="red")
+
+pain_final <- pain_final[c(-105, -106, -149, -81),]
+
+complex_mod_final <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_saliva, data = pain_final)
+summary(complex_mod_final)
 ```
+
+After re-checking the outliers, I still found several data which have high Cook's distance (data no 105, 106, 149, 81), thus I decide to remove those data from the final model.
 
 #### Checking assumptions of the updated model
 
 Normality assumption
 
 ```{r}
-
+plot(complex_mod_final, which = 2)
 ```
 
 Linearity assumption
 
 ```{r}
-
+plot(complex_mod_final, which = 1)
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
-
+plot(complex_mod_final, which = 3)
 ```
 
 Multicollinearity assumption
 
 ```{r}
-
+vif(complex_mod_final)
 ```
+
+The updated regression model has met the assumption of linearity, normality of residuals, homoscedasticity, and multicolinearity.
 
 ## Model comparison
+Report the results of the simpler model and the more complex model. For both models you should report the model test statistics (adj.R2, F, df, and p value). Also, report the statistics describing the coefficients of the predictors in a table format (unstandardized regression coefficients and 95% confidence intervals, standardized regression coefficients (B and Beta values), and p values).
 
-Create the simple model and get the results of the model that needs to be reported based on the What to report section.
+Write up the regression equation of the more complex model in the form of 𝑌 = 𝑏0 + 𝑏1 ∗ X1 + 𝑏2 ∗ X2 +…+ bn * Xn, in which you use the actual regression coefficients of your models. (b0 stands for the intercept and b1, b2 … bn stand for the model coefficients for each of the predictors, and X1, X2, … Xn denote the predictors).
+
+Compare the two models in terms of how much variance they explain of pain’s variability in the sample. Report Akaike information criterion (AIC) for both models and the F test statistic and p value of the likelihood ratio test comparing the two models.
+
+Create the simple model and get the results of the model that needs to be reported based on the What to report section. 
 
 ```{r}
-
+simple_mod_final <- lm(pain ~ age + sex, data = pain_final)
+summary(simple_mod_final) 
 ```
+All predictors simultaneously can predict pain, with F(2, 152) = 7.416, p < 0.01. All predictors could explain 8% variance of pain (R-squared=0.08). The equation for the model is: 
+pain = 8.38 - 0.08 * age + 0.06 * sex
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
-
+complex_mod_final <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_saliva, data = pain_final)
+summary(complex_mod_final)
 ```
+All predictors simultaneously can predict pain, with F(6, 148) = 16.32, p < 0.001. All predictors could explain 39,81% variance of pain (R-squared=0.398). The equation for the model is: 
+pain = 0.34 - 0.02 * age + 0.34 * sex - 0.01 * STAIT * 0.10 * pain_cat - 0.08 * mindfulness * + 0.50 * cortisol_saliva  
 
 Compare the two models.
-
 ```{r}
+anova(simple_mod_final, complex_mod_final)
+model1 <- glance(simple_mod_final)
+model2 <- glance(complex_mod_final)
 
+comparison_mod <- model1 %>% 
+  rbind(model2) %>% 
+  mutate(model = c("simple", "complex")) %>%
+  relocate(model) %>% 
+  as.data.frame()
+comparison_mod
 ```
+The model comparison is shown in the following table. In the simple model, sex and age explain 8% variance of of the pain (R=Squared = 0.08), with F(2, 152) = 7.416, p < 0.01. In the complex model, all predictors explain 39,8% variance of pain (R-squared=0.39) with F(6, 148) = 16.32, p < 0.001.. The AIC of complex model (AIC = 493.87) is lower compare to simple model (AIC = 550.13), thus this model is better explain the data. Thus, we can infer that by including psychological and hormonal variables in model aside from the already used demographic variables would improve our understanding of postoperative pain.
 
