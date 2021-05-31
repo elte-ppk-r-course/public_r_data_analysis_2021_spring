@@ -248,6 +248,7 @@ comparison_mod <- model1 %>%
   relocate(model) %>% 
   as.data.frame()
 comparison_mod
+
 ```
 The model comparison is shown in the following table. In the simple model, sex and age explain 8% variance of of the pain (R=Squared = 0.08), with F(2, 152) = 7.416, p < 0.01. In the complex model, all predictors explain 39,8% variance of pain (R-squared=0.39) with F(6, 148) = 16.32, p < 0.001.. The AIC of complex model (AIC = 493.87) is lower compare to simple model (AIC = 550.13), thus this model is better explain the data. Thus, we can infer that by including psychological and hormonal variables in model aside from the already used demographic variables would improve our understanding of postoperative pain.
 
