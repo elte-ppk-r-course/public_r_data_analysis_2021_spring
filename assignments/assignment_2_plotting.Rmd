@@ -24,8 +24,6 @@ library(scales)
 library(viridis)
 library(RColorBrewer)
 
-
-
 ```
 
 ## Task 1: Climbing expeditions
@@ -37,8 +35,10 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bar colors use the viridis palette and light theme.
 
 ```{r}
+# Import dataset with TidyTuesday function
 climbing <- tt_load("2020-09-22")
 
+# Obtain expeditions variable
 expeditions_d <- climbing$expeditions
 
 view(expeditions_d)
@@ -55,7 +55,6 @@ expeditions_d %>%
     theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
     scale_fill_viridis(discrete = TRUE)
 
-
 ```
 
 ## Task 2: PhDs awarded
@@ -69,8 +68,10 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+# Import dataset
 phds <- tt_load("2019-02-19")
 
+# Obtain variable of phd fields
 phds_field <- phds$phd_by_field
 
 view(phds_field)
@@ -100,8 +101,10 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+# Import dataset
 comm_us <- tt_load("2019-11-05")
 
+# Obtain variable commute
 commute_us <- comm_us$commute
 
 view(commute_us)
@@ -114,11 +117,12 @@ commute_usa <- commute_us %>%
   arrange(state_abb)
 view(commute_usa)
 
-
+# Plot 
 ggplot(commute_usa, aes(x = Walk, y = Bike, label = state_abb, color = state_region)) +
   geom_point(size = 2) +
   scale_x_log10(labels = scales::comma_format()) +
   scale_y_log10(labels = scales::comma_format(), limits = c(100, 200000)) +
+  # To display the exact labels we create a subset
   geom_text(data= subset(commute_usa, state_abb %in% c("AK", "AZ", "CA", "CT", "DE", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MA", "ME", "MI", "MN", "MT", "ND", "NE", "NH", "NJ", "NY", "RI", "OH", "OR", "UT", "VT", "WA", "WY")), 
             color = "black", size = 4) + 
   labs(x = "Number of ppl walking to work (log N)",
@@ -131,13 +135,4 @@ ggplot(commute_usa, aes(x = Walk, y = Bike, label = state_abb, color = state_reg
       plot.title = element_text(size = 14, hjust = 0.5))  +
   theme_light()
   
-  
-  
-  
-
-  
-  
-  
-
-
 ```
