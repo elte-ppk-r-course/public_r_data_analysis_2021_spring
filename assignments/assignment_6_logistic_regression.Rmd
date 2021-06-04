@@ -153,8 +153,8 @@ survival_freq
 ```{r}
 survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
   geom_bar(position = "fill") +
-  facet_grid(rows = vars(Sex), cols = vars(AgeCategory), labeller = labeller(Sex = label_sex)) +
-  labs(title = "Proportions of survival faceted by age group and sex") +
+  facet_wrap(vars(Sex), labeller = labeller(Sex = label_sex)) +
+  labs(title = "Proportions of survival in each sex") +
   xlab("Passenger class") +
   ylab(NULL) +
   theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -183,53 +183,34 @@ survival_line
 
 ```
 
-### Survivel trendline by family members faceted by Sex and Passenger Class
-
-``` {r}
-
-survival_line <- ggplot(titanic_dataset_log, aes(Family, Survived)) +
-   facet_grid(cols = vars(Pclass), rows = vars(Sex), labeller = labeller(Pclass = label_class, Sex = label_sex)) +
-   geom_point() +
-   geom_smooth(
-     method = "glm", 
-     color = "blue",
-     se = FALSE, 
-     method.args = list(family = binomial)
-   )
- 
-survival_line
-
-```
 
 ## Clean the data
 
 ```{r}
-clean_titanic_dataset <- titanic_dataset %>%
-  select(Survived, Age, Sex, Pclass, SibSp, Parch, Family) %>%
-  select(Survived, Age, Sex, Pclass, Family) %>%
+clean_dataset <- titanic_dataset %>%
+  select(Survived, Age, Sex, Pclass, SibSp, Parch) %>%
   mutate(Pclass = as.numeric(as.character(Pclass)))
-
-str(clean_titanic_dataset)
 ```
 
 ## Creating a datatable for Sue, Kate, and Leonardo
 
 ```{r}
-Name <- c("Kate", "Sue", "Leonardo")
-Age <- c("4", "22", "22")
-Sex <- c("female", "female", "male")
-Pclass <- c(3, 3, 3)
-Survived <- c(1, 0, NA)
-Family <- c("2", "2", "2")
+Name <- c("Kate with Leo", "Sue with Leo", "Kate without Leo", "Sue without Leo")
+Age <- c(4, 22, 4, 22)
+SibSp <- c(0, 1, 0, 0)
+Parch <- c(2, 1, 1, 1)
+Pclass <- c(3,3,3,3)
+Sex <- c("female","female","female","female")
 
-family_data <- data.frame(Name, Survived, Age, Sex, Pclass, Family)
+
+family_data <- data.frame(Name, Age, SibSp, Parch)
 
 ```
 
 ## Building the null model
 
 ```{r}
-null_model <- glm(Survived ~ 1, data = clean_titanic_dataset, family = binomial)
+null_model <- glm(Survived ~ 1, data = clean_dataset, family = binomial)
 
 summary(null_model)
 ```
@@ -237,17 +218,31 @@ summary(null_model)
 ## Building the model
 
 ```{r}
-model1 <- glm(Survived ~ Age + Sex + Pclass + SibSp, data = clean_titanic_dataset, family = binomial)
-model2 <- glm(Survived ~ Age +Sex + Pclass + Family, data = clean_titanic_dataset, family = binomial)
+dataset_model <- clean_dataset %>%
+  filter(Sex == "female" & Pclass == 3)
 
-summary(model1)
-summary(model2)
+model <- glm(Survived ~ Age + SibSp + Parch, data = dataset_model, family = binomial)
+
+summary(model)
+
+
+R2_model <- 1-(logLik(model) / logLik(null_model))
+
+R2_model
+
+
 ```
 
 # Check the assumptions
 
-```{r}
 
+```{r}
+newdata <- data.frame(Age = c(4,4,22,22), SibSp = c(0,0,0,1), Parch = c(2,1,1,1))
+
+Survived_prob <- predict(model, family_data, type = "response")
+
+Family_data_assumption <- data.frame(family_data, Survived_prob)
+view(Family_data_assumption)
 ```
 
 # Compare the models
