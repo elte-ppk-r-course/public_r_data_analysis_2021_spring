@@ -203,8 +203,13 @@ SibSp <- c(0, 1, 0, 0)
 Parch <- c(2, 1, 1, 1)
 Pclass <- c(3,3,3,3)
 Sex <- c("female","female","female","female")
+<<<<<<< HEAD
 
 
+=======
+
+
+>>>>>>> 88ac48dbad18904c41272ca80982a6073010b144
 family_data <- data.frame(Name, Age, SibSp, Parch)
 
 ```
@@ -213,29 +218,56 @@ family_data <- data.frame(Name, Age, SibSp, Parch)
 
 ```{r}
 null_model <- glm(Survived ~ 1, data = clean_dataset, family = binomial)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 88ac48dbad18904c41272ca80982a6073010b144
 summary(null_model)
 ```
 
 ## Building the model
 
 ```{r}
+<<<<<<< HEAD
 #filtering out sex and passenger class to improve the model
 dataset_model <- clean_dataset %>%
   filter(Sex == "female" & Pclass == 3)
 
 model <- glm(Survived ~ Age + SibSp + Parch, data = dataset_model, family = binomial)
 summary(model)
+=======
+dataset_model <- clean_dataset %>%
+  filter(Sex == "female" & Pclass == 3)
+
+model <- glm(Survived ~ Age + SibSp + Parch, data = dataset_model, family = binomial)
+
+summary(model)
+
+
+R2_model <- 1-(logLik(model) / logLik(null_model))
+
+R2_model
+
+
+>>>>>>> 88ac48dbad18904c41272ca80982a6073010b144
 ```
 
 # Check the assumptions
 
 
 ```{r}
+newdata <- data.frame(Age = c(4,4,22,22), SibSp = c(0,0,0,1), Parch = c(2,1,1,1))
 
+Survived_prob <- predict(model, family_data, type = "response")
+
+<<<<<<< HEAD
 Survived_prob <- predict(model, family_data, type = "response")
 Survived_odds <- Survived_prob / (1 - Survived_prob)
 
 Family_data_assumption <- data.frame(family_data, Survived_prob, Survived_odds)
+=======
+Family_data_assumption <- data.frame(family_data, Survived_prob)
+>>>>>>> 88ac48dbad18904c41272ca80982a6073010b144
 view(Family_data_assumption)
 ```
 
