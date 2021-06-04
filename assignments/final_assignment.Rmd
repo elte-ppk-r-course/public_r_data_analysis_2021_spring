@@ -58,7 +58,8 @@ emperors <- emperors_raw %>%
     age_reign_start = reign_start_year - birth_year,
     age_reign_end = reign_end_year - birth_year,
     reign_long_year = reign_end_year - reign_start_year,
-    century = reign_end_year %/ 100)
+    reign_long_cat = cut(reign_long_year, breaks = c(-Inf, 1, 10, 20, Inf), labels = c("0 - 1 year", "2 - 10 years", "10 - 20 years", "20 years or more")),
+    century = reign_end_year %/% 100 + 1)
 ```
 
 
@@ -68,8 +69,7 @@ The emperors rised to and fall out of power by many reasons, so I investigate th
 
 ``` {r}
 
-rise_emperors <- emperors %>%
-  ggplot(aes(reign_start_year, rise, color = dynasty, shape = era)) +
+rise_emperors <- ggplot(emperors, aes(reign_start_year, rise, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(-26, 305, 395),
                    labels = c("26 B.C.", "305 A.D.", "395 A.D.")) +
@@ -77,6 +77,7 @@ rise_emperors <- emperors %>%
   ylab("The cause to rising to power") +
   labs(title = "The Rise of Emperors") +
   scale_color_viridis_d()
+  
 
 fall_emperors <- emperors %>%
   ggplot(aes(reign_end_year, cause, color = dynasty, shape = era)) +
@@ -94,7 +95,8 @@ rise_emperors
 fall_emperors
 
 rise_and_fall <- emperors %>%
-  count(rise, cause)
+  count(rise, cause) %>%
+  view()
 
 rise_and_fall2 <- emperors %>%
   ggplot(aes(rise, fill = cause)) +
@@ -106,14 +108,26 @@ rise_and_fall2 <- emperors %>%
   labs(title = "The Rise and Fall of the Roman Emperors") +
   scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
 
-print.data.frame(rise_and_fall)
 rise_and_fall2
 
 death_types <- emperors %>%
-  count(cause, killer)
+  count(cause, killer) %>%
+  view()
+
+fall_and_rule <- emperors %>%
+  ggplot(aes(reign_long_cat, fill = cause)) +
+  geom_bar(width = 0.3) +
+  coord_flip() +
+  theme(legend.position = "bottom") +
+  xlab("The ruling time of the emperors") +
+  ylab(NULL) +
+  labs(title = "The Fall of the Roman Emperors") +
+  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
+
+fall_and_rule
+
 
 died_by <- emperors %>%
-  filter(cause != "NA") %>%
   ggplot(aes(fct_rev(cause), fill = killer)) +
   geom_bar(width = 0.3) +
   coord_flip() +
@@ -124,7 +138,7 @@ died_by <- emperors %>%
   labs(title = "The Cause of Death Among the Roman Emperors") +
   scale_fill_viridis(discrete = TRUE, na.value = "grey")
 
-print.data.frame(death_types)
+
 died_by
 
 ```
@@ -222,6 +236,18 @@ rise_and_fall_principate2 <- emperors_principate %>%
   scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The killers")
 
 rise_and_fall_principate2
+
+fall_and_rule_principate <- emperors_principate %>%
+  ggplot(aes(reign_long_cat, fill = cause_recoded)) +
+  geom_bar(width = 0.3) +
+  coord_flip() +
+  theme(legend.position = "bottom") +
+  xlab("The ruling time of the emperors") +
+  ylab(NULL) +
+  labs(title = "The Fall of the Roman Emperors") +
+  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
+
+fall_and_rule_principate
 ```
 
 
@@ -233,20 +259,20 @@ mi a predikciója az erővel való meghalásnak
 
 ``` {r}
 emperors_principate %>%
-  count(reign_long_year, died_by_force, died_by_battle, died_naturally) %>%
+  count(cause_recoded) %>%
   view()
 
-model_forced <- glm(died_by_force ~ rise + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
+model_forced <- glm(died_by_force ~ rise + century + age_reign_start + reign_long_cat, family = "binomial")
 
 summary(model_forced)
 
-model_natural <- glm(died_naturally ~ rise + age_reign_start + reign_long_year, data = emperors_principate, family = "binomial")
-
-summary(model_natural)
-
-model_battle <- glm(died_by_battle ~ rise + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
-
-summary(model_battle)
+ggplot(emperors_principate, aes(reign_long_year, died_by_force)) +
+  geom_point() +
+  facet_wrap(vars(reign_long_cat)) +
+  geom_smooth(method = "glm", 
+     color = "blue",
+     se = FALSE, 
+     method.args = list(family = binomial))
 
 ```
 
@@ -256,12 +282,10 @@ As the plots shows the "biggest" killers in the Romanian Emperor were the senate
 So whom we should be careful of?
 
 ``` {r}
-emperors_principate_forced <- emperors_principate %>%
-  filter(cause_recoded == "Forced")
 
-model_killer <- glm(died_by_force ~ killer_recoded + reign_long_year + age_reign_start, data = emperors_principate, family = "binomial")
+model_natural <- glm(died_naturally ~ rise + century + age_reign_start + reign_long_cat, data = emperors_principate, family = "binomial")
 
-summary(model_killer)
+summary(model_natural)
 
 ```
 

@@ -176,8 +176,8 @@ survival_freq
 ```r
 survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
   geom_bar(position = "fill") +
-  facet_grid(rows = vars(Sex), cols = vars(AgeCategory), labeller = labeller(Sex = label_sex)) +
-  labs(title = "Proportions of survival faceted by age group and sex") +
+  facet_wrap(vars(Sex), labeller = labeller(Sex = label_sex)) +
+  labs(title = "Proportions of survival in each sex") +
   xlab("Passenger class") +
   ylab(NULL) +
   theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -222,70 +222,36 @@ survival_line
 
 ![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
-### Survivel trendline by family members faceted by Sex and Passenger Class
-
-
-```r
-survival_line <- ggplot(titanic_dataset_log, aes(Family, Survived)) +
-   facet_grid(cols = vars(Pclass), rows = vars(Sex), labeller = labeller(Pclass = label_class, Sex = label_sex)) +
-   geom_point() +
-   geom_smooth(
-     method = "glm", 
-     color = "blue",
-     se = FALSE, 
-     method.args = list(family = binomial)
-   )
- 
-survival_line
-```
-
-```
-## `geom_smooth()` using formula 'y ~ x'
-```
-
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 ## Clean the data
 
 
 ```r
-clean_titanic_dataset <- titanic_dataset %>%
-  select(Survived, Age, Sex, Pclass, Family) %>%
+clean_dataset <- titanic_dataset %>%
+  select(Survived, Age, Sex, Pclass, SibSp, Parch) %>%
   mutate(Pclass = as.numeric(as.character(Pclass)))
-
-str(clean_titanic_dataset)
-```
-
-```
-## tibble[,5] [891 × 5] (S3: tbl_df/tbl/data.frame)
-##  $ Survived: Factor w/ 2 levels "0","1": 1 2 2 2 1 1 1 1 2 2 ...
-##  $ Age     : num [1:891] 22 38 26 35 35 NA 54 2 27 14 ...
-##   ..- attr(*, "format.spss")= chr "F5.2"
-##  $ Sex     : Factor w/ 2 levels "female","male": 2 1 1 1 2 2 2 2 1 1 ...
-##  $ Pclass  : num [1:891] 3 1 3 1 3 3 1 3 3 2 ...
-##  $ Family  : num [1:891] 1 1 0 1 0 0 0 4 2 1 ...
-##   ..- attr(*, "format.spss")= chr "F1.0"
 ```
 
 ## Creating a datatable for Sue, Kate, and Leonardo
 
 
 ```r
-Name <- c("Kate", "Sue", "Leonardo")
-Age <- c("4", "22", "22")
-Sex <- c("female", "female", "male")
-Pclass <- c(3, 3, 3)
-Survived <- c(1, 0, NA)
-Family <- c("2", "2", "2")
+Name <- c("Kate with Leo", "Sue with Leo", "Kate without Leo", "Sue without Leo")
+Age <- c(4, 22, 4, 22)
+SibSp <- c(0, 1, 0, 0)
+Parch <- c(2, 1, 1, 1)
+Pclass <- c(3,3,3,3)
+Sex <- c("female","female","female","female")
 
-family_data <- data.frame(Name, Survived, Age, Sex, Pclass, Family)
+
+family_data <- data.frame(Name, Age, SibSp, Parch)
 ```
 
 ## Building the null model
 
 
 ```r
-null_model <- glm(Survived ~ 1, data = clean_titanic_dataset, family = binomial)
+null_model <- glm(Survived ~ 1, data = clean_dataset, family = binomial)
 
 summary(null_model)
 ```
@@ -293,7 +259,7 @@ summary(null_model)
 ```
 ## 
 ## Call:
-## glm(formula = Survived ~ 1, family = binomial, data = clean_titanic_dataset)
+## glm(formula = Survived ~ 1, family = binomial, data = clean_dataset)
 ## 
 ## Deviance Residuals: 
 ##     Min       1Q   Median       3Q      Max  
@@ -318,7 +284,10 @@ summary(null_model)
 
 
 ```r
-model <- glm(Survived ~ Age +Sex + Pclass + Family, data = clean_titanic_dataset, family = binomial)
+dataset_model <- clean_dataset %>%
+  filter(Sex == "female" & Pclass == 3)
+
+model <- glm(Survived ~ Age + SibSp + Parch, data = dataset_model, family = binomial)
 
 summary(model)
 ```
@@ -326,36 +295,54 @@ summary(model)
 ```
 ## 
 ## Call:
-## glm(formula = Survived ~ Age + Sex + Pclass + Family, family = binomial, 
-##     data = clean_titanic_dataset)
+## glm(formula = Survived ~ Age + SibSp + Parch, family = binomial, 
+##     data = dataset_model)
 ## 
 ## Deviance Residuals: 
 ##     Min       1Q   Median       3Q      Max  
-## -2.6783  -0.6609  -0.3969   0.6199   2.4491  
+## -1.6465  -1.0332  -0.6109   1.0661   1.8913  
 ## 
 ## Coefficients:
-##             Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  5.54568    0.54249  10.223  < 2e-16 ***
-## Age         -0.04281    0.00810  -5.285 1.26e-07 ***
-## Sexmale     -2.65962    0.21792 -12.204  < 2e-16 ***
-## Pclass      -1.30259    0.14003  -9.302  < 2e-16 ***
-## Family      -0.19961    0.07341  -2.719  0.00655 ** 
+##             Estimate Std. Error z value Pr(>|z|)  
+## (Intercept)  1.26446    0.52163   2.424   0.0153 *
+## Age         -0.04382    0.01932  -2.268   0.0233 *
+## SibSp       -0.47154    0.21265  -2.217   0.0266 *
+## Parch       -0.11948    0.18028  -0.663   0.5075  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 964.52  on 713  degrees of freedom
-## Residual deviance: 639.37  on 709  degrees of freedom
-##   (177 observations deleted due to missingness)
-## AIC: 649.37
+##     Null deviance: 140.77  on 101  degrees of freedom
+## Residual deviance: 129.51  on  98  degrees of freedom
+##   (42 observations deleted due to missingness)
+## AIC: 137.51
 ## 
-## Number of Fisher Scoring iterations: 5
+## Number of Fisher Scoring iterations: 4
+```
+
+```r
+R2_model <- 1-(logLik(model) / logLik(null_model))
+
+R2_model
+```
+
+```
+## 'log Lik.' 0.8908611 (df=4)
 ```
 
 # Check the assumptions
 
 
+
+```r
+newdata <- data.frame(Age = c(4,4,22,22), SibSp = c(0,0,0,1), Parch = c(2,1,1,1))
+
+Survived_prob <- predict(model, family_data, type = "response")
+
+Family_data_assumption <- data.frame(family_data, Survived_prob)
+view(Family_data_assumption)
+```
 
 # Compare the models
 
