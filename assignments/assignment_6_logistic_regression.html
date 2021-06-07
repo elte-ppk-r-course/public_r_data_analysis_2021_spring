@@ -193,7 +193,6 @@ pre code {
 <li><a href="#calculate-odds-ratio-and-confidence-interval">Calculate odds ratio and confidence interval</a></li>
 <li><a href="#report-the-results">Report the results</a></li>
 <li><a href="#discussion">Discussion</a></li>
-<li><a href="#discussion-1">Discussion</a></li>
 </ul>
 </div>
 
@@ -583,67 +582,6 @@ aic &lt;- aictab(cand.set = models, modnames = modelnames)</code></pre>
 <p>Sue’s survival probability without Leo on the board was 0.5614428, while with Leo, it was 0.4496468.</p>
 <p>Kate’s survival probability with or without Leo on the board was 0.7064139, as having a parent on the board was not entered as a predictor variable to the model.</p>
 <p>The results shows that Kate had a higher probability to survive without Leo on the board, and that Leo’s absence had nothing to do with her death.</p>
-<pre class="r"><code>summary(model)</code></pre>
-<pre><code>## 
-## Call:
-## glm(formula = Survived ~ Age + Pclass + SibSp, family = binomial, 
-##     data = dataset_model)
-## 
-## Deviance Residuals: 
-##     Min       1Q   Median       3Q      Max  
-## -3.1892   0.1137   0.2362   0.5423   1.8384  
-## 
-## Coefficients:
-##             Estimate Std. Error z value Pr(&gt;|z|)    
-## (Intercept)  7.88879    1.17643   6.706 2.00e-11 ***
-## Age         -0.03506    0.01488  -2.356   0.0185 *  
-## Pclass      -2.29018    0.34565  -6.626 3.45e-11 ***
-## SibSp       -0.44912    0.17899  -2.509   0.0121 *  
-## ---
-## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
-## 
-## (Dispersion parameter for binomial family taken to be 1)
-## 
-##     Null deviance: 290.76  on 260  degrees of freedom
-## Residual deviance: 201.14  on 257  degrees of freedom
-## AIC: 209.14
-## 
-## Number of Fisher Scoring iterations: 6</code></pre>
-<pre class="r"><code>res</code></pre>
-<pre><code>## 
-##  Pearson&#39;s Chi-squared test with Yates&#39; continuity correction
-## 
-## data:  dataset_model$Survived and round(fitted(model), 0)
-## X-squared = 78.536, df = 1, p-value &lt; 2.2e-16</code></pre>
-<pre class="r"><code>class_table</code></pre>
-<pre><code>##          response
-## predicted   0   1
-##         0  37  13
-##         1  27 184</code></pre>
-<pre class="r"><code>sensitivity</code></pre>
-<pre><code>## [1] 0.8720379</code></pre>
-<pre class="r"><code>specificity</code></pre>
-<pre><code>## [1] 0.74</code></pre>
-<pre class="r"><code>odds_and_conf</code></pre>
-<pre><code>##  
-##               OR  lower95ci upper95ci     Pr(&gt;|Z|)
-## Age    0.9655512 0.93779340 0.9941306 1.849758e-02
-## Pclass 0.1012483 0.05142473 0.1993443 3.454665e-11
-## SibSp  0.6381910 0.44936014 0.9063727 1.210103e-02</code></pre>
-<pre class="r"><code>aic</code></pre>
-<pre><code>## 
-## Model selection based on AICc:
-## 
-##            K   AICc Delta_AICc AICcWt Cum.Wt      LL
-## model      4 209.30       0.00      1      1 -100.57
-## null model 1 966.52     757.22      0      1 -482.26</code></pre>
-<pre class="r"><code>McFaden_R2</code></pre>
-<pre><code>## &#39;log Lik.&#39; 0.7914559 (df=4)</code></pre>
-<pre class="r"><code>view(Family_data_assumption)</code></pre>
-</div>
-<div id="discussion-1" class="section level1">
-<h1>Discussion</h1>
-<p>Sue’s survavial probability without Leonardo on the board was 0.5614428, while with Leonardo, it was 0.4496468. Sue’s survavial probability without Leonardo on the board was 0.7064139, while with Leonardo, it was 0.7064139. The results shows that Leo’s presence would weaken the probability of Kate and Sue to survive the catastrophe.</p>
 </div>
 
 

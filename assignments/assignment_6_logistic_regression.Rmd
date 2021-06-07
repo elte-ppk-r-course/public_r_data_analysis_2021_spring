@@ -268,24 +268,5 @@ Kate's survival probability with or without Leo on the board was `r Family_data_
 The results shows that Kate had a higher probability to survive without Leo on the board, and that Leo's absence had nothing to do with her death.
 
 
-```{r}
-summary(model)
-res
-class_table
-sensitivity
-specificity
-odds_and_conf
-aic
-McFaden_R2
-
-Family_data_assumption
-```
-
-# Discussion
-Sue's survavial probability without Leonardo on the board was `r Family_data_assumption[4,6]`, while with Leonardo, it was `r Family_data_assumption[2,6]`.
-Sue's survavial probability without Leonardo on the board was `r Family_data_assumption[3,6]`, while with Leonardo, it was `r Family_data_assumption[1,6]`.
-The results shows that Leo's presence would weaken the probability of Kate and Sue to survive the catastrophe. 
-
-
 
 
