@@ -83,11 +83,8 @@ titanic_dataset <- haven::read_sav(here::here("~/Dokumentumok/3_phd_courses/r/as
   mutate(Survived = as.factor(Survived),
          Pclass = as.factor(Pclass),
          Sex = as.factor(Sex),
-         Embarked = as.factor(Embarked),
-         AgeCategory = cut(Age,
-                           breaks = c(-Inf, 18, Inf),
-                           labels = c("Child", "Adult")),
-         Family = SibSp + Parch)
+         Embarked = as.factor(Embarked)
+        )
 
 label_class = c ("1" = "1st Class", "2" = "2nd Class", "3" = "3rd Class")
 label_sex = c("female" = "Females", "male" = "Males")
@@ -97,47 +94,12 @@ label_survived = c("0" = "Not survived", "1" = "Survived")
 
 ## EDA
 
-### Survival age
-
-
-```r
-survival_age <- ggplot(titanic_dataset, aes(Sex, Age, color = Survived)) +
-  geom_point(alpha = 0.2, size = 7) +
-  labs(title = "The age of passengers") +
-  xlab(NULL) +
-  ylab(NULL) +
-  theme(legend.title = element_blank(), legend.position = c(0.1, 0.9)) +
-  scale_color_viridis(discrete = TRUE, labels = label_survived)
-```
-
-### Age freqency by survival
-
-
-```r
-class_freq <- ggplot(titanic_dataset, aes(Age, fill = Sex)) +
-  geom_histogram(binwidth = 1) +
-  facet_wrap(vars(Pclass), labeller = labeller(Pclass = label_class)) +
-  labs(title = "Age of travellers in each class") +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  scale_fill_viridis_d(labels = c("Not survived", "Survived"))
-
-class_freq
-```
-
-```
-## Warning: Removed 177 rows containing non-finite values (stat_bin).
-```
-
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
-
-
-### Age freqency by port of embarkation
 
 
 ```r
 port_freq <- ggplot(titanic_dataset, aes(Age, fill = Embarked)) +
   geom_histogram(binwidth = 1) +
-  labs(title = "Age of travellers embarked in each port") +
+  labs(title = "The travellers embarked in each port") +
   theme(legend.position = "bottom", legend.title = element_blank()) +
   scale_fill_viridis_d(labels = label_embarked)
 
@@ -148,10 +110,43 @@ port_freq
 ## Warning: Removed 177 rows containing non-finite values (stat_bin).
 ```
 
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
 
-### Survival frequency
+```r
+survival_age <- ggplot(titanic_dataset, aes(Sex, Age, color = Survived)) +
+  geom_point(alpha = 0.2, size = 7) +
+  coord_flip() +
+  labs(title = "The age of passengers") +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme(legend.title = element_blank(), legend.position = c(0.1, 0.9)) +
+  scale_color_viridis(discrete = TRUE, labels = label_survived)
 
+survival_age
+```
+
+```
+## Warning: Removed 177 rows containing missing values (geom_point).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-2.png)<!-- -->
+
+```r
+class_freq <- ggplot(titanic_dataset, aes(Age, fill = Sex)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(vars(Pclass), labeller = labeller(Pclass = label_class)) +
+  labs(title = "The travellers in each class") +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  scale_fill_viridis_d(labels = label_sex)
+
+class_freq
+```
+
+```
+## Warning: Removed 177 rows containing non-finite values (stat_bin).
+```
+
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-3.png)<!-- -->
 
 ```r
 survival_freq <- ggplot(titanic_dataset, aes(Age, fill = Survived)) +
@@ -168,16 +163,13 @@ survival_freq
 ## Warning: Removed 177 rows containing non-finite values (stat_bin).
 ```
 
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
-
-### Survival proportion
-
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-4.png)<!-- -->
 
 ```r
 survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
   geom_bar(position = "fill") +
   facet_wrap(vars(Sex), labeller = labeller(Sex = label_sex)) +
-  labs(title = "Proportions of survival in each sex") +
+  labs(title = "The Proportion of survivers") +
   xlab("Passenger class") +
   ylab(NULL) +
   theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -186,10 +178,7 @@ survival_prop <- ggplot(titanic_dataset, aes(Pclass, fill = Survived)) +
 survival_prop
 ```
 
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
-
-### Survivel trendline faceted by Sex and Passenger Class
-
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-5.png)<!-- -->
 
 ```r
 titanic_dataset_log <- titanic_dataset %>%
@@ -220,7 +209,8 @@ survival_line
 ## Warning: Removed 177 rows containing missing values (geom_point).
 ```
 
-![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-3-6.png)<!-- -->
+
 
 ## Clean the data
 
@@ -282,39 +272,63 @@ summary(null_model)
 
 
 ```r
-#filtering out sex and passenger class to improve the model
 dataset_model <- clean_dataset %>%
   filter(Sex == "female")
 
-model <- glm(Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = "binomial")
+model <- glm(Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = binomial)
+model <- step(model, Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = binomial)
+```
+
+```
+## Start:  AIC=210.53
+## Survived ~ Age + Pclass + SibSp + Parch
+## 
+##          Df Deviance    AIC
+## - Parch   1   201.14 209.14
+## <none>        200.53 210.53
+## - SibSp   1   205.63 213.63
+## - Age     1   205.68 213.68
+## - Pclass  1   274.75 282.75
+## 
+## Step:  AIC=209.14
+## Survived ~ Age + Pclass + SibSp
+## 
+##          Df Deviance    AIC
+## <none>        201.14 209.14
+## + Parch   1   200.53 210.53
+## - Age     1   207.03 213.03
+## - SibSp   1   208.05 214.05
+## - Pclass  1   279.88 285.88
+```
+
+```r
 summary(model)
 ```
 
 ```
 ## 
 ## Call:
-## glm(formula = Survived ~ Age + Pclass + SibSp + Parch, family = "binomial", 
+## glm(formula = Survived ~ Age + Pclass + SibSp, family = binomial, 
 ##     data = dataset_model)
 ## 
 ## Deviance Residuals: 
 ##     Min       1Q   Median       3Q      Max  
-## -3.1109   0.1201   0.2379   0.5390   1.7907  
+## -3.1892   0.1137   0.2362   0.5423   1.8384  
 ## 
 ## Coefficients:
 ##             Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  7.79290    1.16947   6.664 2.67e-11 ***
-## Age         -0.03309    0.01499  -2.207   0.0273 *  
-## Pclass      -2.24751    0.34713  -6.475 9.51e-11 ***
-## SibSp       -0.40612    0.18671  -2.175   0.0296 *  
-## Parch       -0.12103    0.15672  -0.772   0.4400    
+## (Intercept)  7.88879    1.17643   6.706 2.00e-11 ***
+## Age         -0.03506    0.01488  -2.356   0.0185 *  
+## Pclass      -2.29018    0.34565  -6.626 3.45e-11 ***
+## SibSp       -0.44912    0.17899  -2.509   0.0121 *  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
 ##     Null deviance: 290.76  on 260  degrees of freedom
-## Residual deviance: 200.53  on 256  degrees of freedom
-## AIC: 210.53
+## Residual deviance: 201.14  on 257  degrees of freedom
+## AIC: 209.14
 ## 
 ## Number of Fisher Scoring iterations: 6
 ```
@@ -328,8 +342,7 @@ Survived_prob <- predict(model, family_data, type = "response")
 Survived_odds <- Survived_prob / (1 - Survived_prob)
 
 
-Family_data_assumption <- data.frame(family_data, Survived_prob, Survived_odds)
-view(Family_data_assumption)
+Family_data_assumption <- data.frame(family_data, Survived_prob)
 ```
 
 # Compare the models
@@ -340,6 +353,8 @@ McFaden_R2 <- 1-(logLik(model) / logLik(null_model))
 
 classDF <- data.frame(response = dataset_model$Survived, predicted = round(fitted(model),0))
 class_table <- xtabs(~ predicted + response, data = classDF)
+sensitivity <- class_table[2,2] / (class_table[2,1] + class_table[2,2])
+specificity <- class_table[1,1] / (class_table[1,2] + class_table[1,1])
 
 res <- chisq.test(dataset_model$Survived, round(fitted(model),0))
 
@@ -352,91 +367,46 @@ aic <- aictab(cand.set = models, modnames = modelnames)
 
 
 ```r
-odds_and_conf <- logistic.display(model)
+odds_and_conf <- logistic.display(model, simplified=TRUE)
 ```
 
 # Report the results
 
-The build the model with higher accuracy I filtered out the female passengers. The age, the passenger class, the number of siblings or spouses accompanying the passenger, and the number of parents or children accompanying the passenger were entered as predictor values.
-The model was fitted to all the passengers.
+The null model was fitted to all the passengers.
+The build the model with higher accuracy I filtered out the female passengers. The age (Age), the passenger class (Pclass), the number of siblings or spouses accompanying the passenger (SibSp), and the number of parents or children accompanying the passenger (Parch) were entered as predictor values. Stepwise regression analysis was performed to find the significant predictor variables.
+The regression equation of the model is: Survived = 7.793 - 0.033 ∗ Age - 0.248 ∗ Pclass - 0.406 . The best predictor of the survival is the passengers' class (b =  - 0.406, p < 0.001). The presence of spouse or siblings was significant (p = 0.03), while the presence of parent or child was not significant, thus it was not included in the final model.
 
 
 ```r
-broom::tidy(model, conf.int = TRUE, exponentiate = TRUE)
-```
-
-```
-## # A tibble: 5 x 7
-##   term        estimate std.error statistic  p.value conf.low conf.high
-##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl>
-## 1 (Intercept) 2423.       1.17       6.66  2.67e-11 293.     29527.   
-## 2 Age            0.967    0.0150    -2.21  2.73e- 2   0.938      0.996
-## 3 Pclass         0.106    0.347     -6.47  9.51e-11   0.0503     0.198
-## 4 SibSp          0.666    0.187     -2.18  2.96e- 2   0.454      0.949
-## 5 Parch          0.886    0.157     -0.772 4.40e- 1   0.641      1.19
-```
-
-```r
-odds_and_conf
+summary(model)
 ```
 
 ```
 ## 
-## Logistic regression predicting Survived : 1 vs 0 
-##  
-##                     crude OR(95%CI)   adj. OR(95%CI)    P(Wald's test)
-## Age (cont. var.)    1.02 (1,1.04)     0.97 (0.94,1)     0.027         
-##                                                                       
-## Pclass (cont. var.) 0.13 (0.07,0.23)  0.11 (0.05,0.21)  < 0.001       
-##                                                                       
-## SibSp (cont. var.)  0.64 (0.48,0.85)  0.67 (0.46,0.96)  0.03          
-##                                                                       
-## Parch (cont. var.)  0.68 (0.53,0.87)  0.89 (0.65,1.2)   0.44          
-##                                                                       
-##                     P(LR-test)
-## Age (cont. var.)    0.023     
-##                               
-## Pclass (cont. var.) < 0.001   
-##                               
-## SibSp (cont. var.)  0.024     
-##                               
-## Parch (cont. var.)  0.433     
-##                               
-## Log-likelihood = -100.2653
-## No. of observations = 261
-## AIC value = 210.5306
-```
-
-```r
-aic
-```
-
-```
+## Call:
+## glm(formula = Survived ~ Age + Pclass + SibSp, family = binomial, 
+##     data = dataset_model)
 ## 
-## Model selection based on AICc:
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -3.1892   0.1137   0.2362   0.5423   1.8384  
 ## 
-##            K   AICc Delta_AICc AICcWt Cum.Wt      LL
-## model      5 210.77       0.00      1      1 -100.27
-## null model 1 966.52     755.76      0      1 -482.26
-```
-
-```r
-McFaden_R2
-```
-
-```
-## 'log Lik.' 0.792092 (df=5)
-```
-
-```r
-class_table
-```
-
-```
-##          response
-## predicted   0   1
-##         0  34  13
-##         1  30 184
+## Coefficients:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  7.88879    1.17643   6.706 2.00e-11 ***
+## Age         -0.03506    0.01488  -2.356   0.0185 *  
+## Pclass      -2.29018    0.34565  -6.626 3.45e-11 ***
+## SibSp       -0.44912    0.17899  -2.509   0.0121 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 290.76  on 260  degrees of freedom
+## Residual deviance: 201.14  on 257  degrees of freedom
+## AIC: 209.14
+## 
+## Number of Fisher Scoring iterations: 6
 ```
 
 ```r
@@ -448,6 +418,204 @@ res
 ## 	Pearson's Chi-squared test with Yates' continuity correction
 ## 
 ## data:  dataset_model$Survived and round(fitted(model), 0)
-## X-squared = 67.706, df = 1, p-value < 2.2e-16
+## X-squared = 78.536, df = 1, p-value < 2.2e-16
 ```
+
+```r
+class_table
+```
+
+```
+##          response
+## predicted   0   1
+##         0  37  13
+##         1  27 184
+```
+
+```r
+sensitivity
+```
+
+```
+## [1] 0.8720379
+```
+
+```r
+specificity
+```
+
+```
+## [1] 0.74
+```
+
+```r
+odds_and_conf
+```
+
+```
+##  
+##               OR  lower95ci upper95ci     Pr(>|Z|)
+## Age    0.9655512 0.93779340 0.9941306 1.849758e-02
+## Pclass 0.1012483 0.05142473 0.1993443 3.454665e-11
+## SibSp  0.6381910 0.44936014 0.9063727 1.210103e-02
+```
+
+```r
+aic
+```
+
+```
+## 
+## Model selection based on AICc:
+## 
+##            K   AICc Delta_AICc AICcWt Cum.Wt      LL
+## model      4 209.30       0.00      1      1 -100.57
+## null model 1 966.52     757.22      0      1 -482.26
+```
+
+```r
+McFaden_R2
+```
+
+```
+## 'log Lik.' 0.7914559 (df=4)
+```
+
+```r
+Family_data_assumption
+```
+
+```
+##               Name Age SibSp Parch Pclass Survived_prob
+## 1    Kate with Leo   4     0     2      3     0.7064139
+## 2     Sue with Leo  22     1     1      3     0.4496468
+## 3 Kate without Leo   4     0     1      3     0.7064139
+## 4  Sue without Leo  22     0     1      3     0.5614428
+```
+
+# Discussion
+
+Sue's survival probability without Leo on the board was 0.5614428, while with Leo, it was 0.4496468.
+
+Kate's survival probability with or without Leo on the board was 0.7064139, as having a parent on the board was not entered as a predictor variable to the model.
+
+The results shows that Kate had a higher probability to survive without Leo on the board, and that Leo's absence had nothing to do with her death.
+
+
+
+```r
+summary(model)
+```
+
+```
+## 
+## Call:
+## glm(formula = Survived ~ Age + Pclass + SibSp, family = binomial, 
+##     data = dataset_model)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -3.1892   0.1137   0.2362   0.5423   1.8384  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  7.88879    1.17643   6.706 2.00e-11 ***
+## Age         -0.03506    0.01488  -2.356   0.0185 *  
+## Pclass      -2.29018    0.34565  -6.626 3.45e-11 ***
+## SibSp       -0.44912    0.17899  -2.509   0.0121 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 290.76  on 260  degrees of freedom
+## Residual deviance: 201.14  on 257  degrees of freedom
+## AIC: 209.14
+## 
+## Number of Fisher Scoring iterations: 6
+```
+
+```r
+res
+```
+
+```
+## 
+## 	Pearson's Chi-squared test with Yates' continuity correction
+## 
+## data:  dataset_model$Survived and round(fitted(model), 0)
+## X-squared = 78.536, df = 1, p-value < 2.2e-16
+```
+
+```r
+class_table
+```
+
+```
+##          response
+## predicted   0   1
+##         0  37  13
+##         1  27 184
+```
+
+```r
+sensitivity
+```
+
+```
+## [1] 0.8720379
+```
+
+```r
+specificity
+```
+
+```
+## [1] 0.74
+```
+
+```r
+odds_and_conf
+```
+
+```
+##  
+##               OR  lower95ci upper95ci     Pr(>|Z|)
+## Age    0.9655512 0.93779340 0.9941306 1.849758e-02
+## Pclass 0.1012483 0.05142473 0.1993443 3.454665e-11
+## SibSp  0.6381910 0.44936014 0.9063727 1.210103e-02
+```
+
+```r
+aic
+```
+
+```
+## 
+## Model selection based on AICc:
+## 
+##            K   AICc Delta_AICc AICcWt Cum.Wt      LL
+## model      4 209.30       0.00      1      1 -100.57
+## null model 1 966.52     757.22      0      1 -482.26
+```
+
+```r
+McFaden_R2
+```
+
+```
+## 'log Lik.' 0.7914559 (df=4)
+```
+
+```r
+view(Family_data_assumption)
+```
+
+# Discussion
+Sue's survavial probability without Leonardo on the board was 0.5614428, while with Leonardo, it was 0.4496468.
+Sue's survavial probability without Leonardo on the board was 0.7064139, while with Leonardo, it was 0.7064139.
+The results shows that Leo's presence would weaken the probability of Kate and Sue to survive the catastrophe. 
+
+
+
 

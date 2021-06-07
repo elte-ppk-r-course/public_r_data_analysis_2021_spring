@@ -95,7 +95,6 @@ label_survived = c("0" = "Not survived", "1" = "Survived")
 
 ## EDA
 
-### Port of embarkation
 
 ```{r}
 port_freq <- ggplot(titanic_dataset, aes(Age, fill = Embarked)) +
@@ -105,11 +104,7 @@ port_freq <- ggplot(titanic_dataset, aes(Age, fill = Embarked)) +
   scale_fill_viridis_d(labels = label_embarked)
 
 port_freq
-```
 
-### Survival age
-
-```{r}
 survival_age <- ggplot(titanic_dataset, aes(Sex, Age, color = Survived)) +
   geom_point(alpha = 0.2, size = 7) +
   coord_flip() +
@@ -207,7 +202,6 @@ dataset_model <- clean_dataset %>%
 
 model <- glm(Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = binomial)
 model <- step(model, Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = binomial)
-
 summary(model)
 
 ```
@@ -272,6 +266,25 @@ Sue's survival probability without Leo on the board was `r Family_data_assumptio
 Kate's survival probability with or without Leo on the board was `r Family_data_assumption[3,6]`, as having a parent on the board was not entered as a predictor variable to the model.
 
 The results shows that Kate had a higher probability to survive without Leo on the board, and that Leo's absence had nothing to do with her death.
+
+
+```{r}
+summary(model)
+res
+class_table
+sensitivity
+specificity
+odds_and_conf
+aic
+McFaden_R2
+
+view(Family_data_assumption)
+```
+
+# Discussion
+Sue's survavial probability without Leonardo on the board was `r Family_data_assumption[4,6]`, while with Leonardo, it was `r Family_data_assumption[2,6]`.
+Sue's survavial probability without Leonardo on the board was `r Family_data_assumption[3,6]`, while with Leonardo, it was `r Family_data_assumption[1,6]`.
+The results shows that Leo's presence would weaken the probability of Kate and Sue to survive the catastrophe. 
 
 
 
