@@ -278,7 +278,7 @@ odds_and_conf
 aic
 McFaden_R2
 
-view(Family_data_assumption)
+Family_data_assumption
 ```
 
 # Discussion
