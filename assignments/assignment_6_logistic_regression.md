@@ -222,14 +222,14 @@ survival_line
 
 ![](assignment_6_logistic_regression_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
-
 ## Clean the data
 
 
 ```r
 clean_dataset <- titanic_dataset %>%
-  select(Survived, Age, Sex, Pclass, SibSp, Parch) %>%
-  mutate(Pclass = as.numeric(as.character(Pclass)))
+  dplyr::select(Survived, Age, Sex, Pclass, SibSp, Parch) %>%
+  mutate(Pclass = as.numeric(as.character(Pclass))) %>%
+  na.omit()
 ```
 
 ## Creating a datatable for Sue, Kate, and Leonardo
@@ -240,11 +240,10 @@ Name <- c("Kate with Leo", "Sue with Leo", "Kate without Leo", "Sue without Leo"
 Age <- c(4, 22, 4, 22)
 SibSp <- c(0, 1, 0, 0)
 Parch <- c(2, 1, 1, 1)
-Pclass <- c(3,3,3,3)
 Sex <- c("female","female","female","female")
+Pclass <- c(3,3,3,3)
 
-
-family_data <- data.frame(Name, Age, SibSp, Parch)
+family_data <- data.frame(Name, Age, SibSp, Parch, Pclass)
 ```
 
 ## Building the null model
@@ -252,7 +251,6 @@ family_data <- data.frame(Name, Age, SibSp, Parch)
 
 ```r
 null_model <- glm(Survived ~ 1, data = clean_dataset, family = binomial)
-
 summary(null_model)
 ```
 
@@ -262,20 +260,20 @@ summary(null_model)
 ## glm(formula = Survived ~ 1, family = binomial, data = clean_dataset)
 ## 
 ## Deviance Residuals: 
-##     Min       1Q   Median       3Q      Max  
-## -0.9841  -0.9841  -0.9841   1.3839   1.3839  
+##    Min      1Q  Median      3Q     Max  
+## -1.021  -1.021  -1.021   1.342   1.342  
 ## 
 ## Coefficients:
 ##             Estimate Std. Error z value Pr(>|z|)    
-## (Intercept) -0.47329    0.06889   -6.87  6.4e-12 ***
+## (Intercept)  -0.3799     0.0762  -4.985  6.2e-07 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 1186.7  on 890  degrees of freedom
-## Residual deviance: 1186.7  on 890  degrees of freedom
-## AIC: 1188.7
+##     Null deviance: 964.52  on 713  degrees of freedom
+## Residual deviance: 964.52  on 713  degrees of freedom
+## AIC: 966.52
 ## 
 ## Number of Fisher Scoring iterations: 4
 ```
@@ -284,51 +282,41 @@ summary(null_model)
 
 
 ```r
+#filtering out sex and passenger class to improve the model
 dataset_model <- clean_dataset %>%
-  filter(Sex == "female" & Pclass == 3)
+  filter(Sex == "female")
 
-model <- glm(Survived ~ Age + SibSp + Parch, data = dataset_model, family = binomial)
-
+model <- glm(Survived ~ Age + Pclass + SibSp + Parch, data = dataset_model, family = "binomial")
 summary(model)
 ```
 
 ```
 ## 
 ## Call:
-## glm(formula = Survived ~ Age + SibSp + Parch, family = binomial, 
+## glm(formula = Survived ~ Age + Pclass + SibSp + Parch, family = "binomial", 
 ##     data = dataset_model)
 ## 
 ## Deviance Residuals: 
 ##     Min       1Q   Median       3Q      Max  
-## -1.6465  -1.0332  -0.6109   1.0661   1.8913  
+## -3.1109   0.1201   0.2379   0.5390   1.7907  
 ## 
 ## Coefficients:
-##             Estimate Std. Error z value Pr(>|z|)  
-## (Intercept)  1.26446    0.52163   2.424   0.0153 *
-## Age         -0.04382    0.01932  -2.268   0.0233 *
-## SibSp       -0.47154    0.21265  -2.217   0.0266 *
-## Parch       -0.11948    0.18028  -0.663   0.5075  
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  7.79290    1.16947   6.664 2.67e-11 ***
+## Age         -0.03309    0.01499  -2.207   0.0273 *  
+## Pclass      -2.24751    0.34713  -6.475 9.51e-11 ***
+## SibSp       -0.40612    0.18671  -2.175   0.0296 *  
+## Parch       -0.12103    0.15672  -0.772   0.4400    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## (Dispersion parameter for binomial family taken to be 1)
 ## 
-##     Null deviance: 140.77  on 101  degrees of freedom
-## Residual deviance: 129.51  on  98  degrees of freedom
-##   (42 observations deleted due to missingness)
-## AIC: 137.51
+##     Null deviance: 290.76  on 260  degrees of freedom
+## Residual deviance: 200.53  on 256  degrees of freedom
+## AIC: 210.53
 ## 
-## Number of Fisher Scoring iterations: 4
-```
-
-```r
-R2_model <- 1-(logLik(model) / logLik(null_model))
-
-R2_model
-```
-
-```
-## 'log Lik.' 0.8908611 (df=4)
+## Number of Fisher Scoring iterations: 6
 ```
 
 # Check the assumptions
@@ -336,23 +324,130 @@ R2_model
 
 
 ```r
-newdata <- data.frame(Age = c(4,4,22,22), SibSp = c(0,0,0,1), Parch = c(2,1,1,1))
-
 Survived_prob <- predict(model, family_data, type = "response")
+Survived_odds <- Survived_prob / (1 - Survived_prob)
 
-Family_data_assumption <- data.frame(family_data, Survived_prob)
+
+Family_data_assumption <- data.frame(family_data, Survived_prob, Survived_odds)
 view(Family_data_assumption)
 ```
 
 # Compare the models
 
 
+```r
+McFaden_R2 <- 1-(logLik(model) / logLik(null_model))
+
+classDF <- data.frame(response = dataset_model$Survived, predicted = round(fitted(model),0))
+class_table <- xtabs(~ predicted + response, data = classDF)
+
+res <- chisq.test(dataset_model$Survived, round(fitted(model),0))
+
+models <- list(null_model, model)
+modelnames <- c("null model", "model")
+aic <- aictab(cand.set = models, modnames = modelnames)
+```
 
 # Calculate odds ratio and confidence interval
 
 
+```r
+odds_and_conf <- logistic.display(model)
+```
 
 # Report the results
 
+The build the model with higher accuracy I filtered out the female passengers. The age, the passenger class, the number of siblings or spouses accompanying the passenger, and the number of parents or children accompanying the passenger were entered as predictor values.
+The model was fitted to all the passengers.
 
+
+```r
+broom::tidy(model, conf.int = TRUE, exponentiate = TRUE)
+```
+
+```
+## # A tibble: 5 x 7
+##   term        estimate std.error statistic  p.value conf.low conf.high
+##   <chr>          <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl>
+## 1 (Intercept) 2423.       1.17       6.66  2.67e-11 293.     29527.   
+## 2 Age            0.967    0.0150    -2.21  2.73e- 2   0.938      0.996
+## 3 Pclass         0.106    0.347     -6.47  9.51e-11   0.0503     0.198
+## 4 SibSp          0.666    0.187     -2.18  2.96e- 2   0.454      0.949
+## 5 Parch          0.886    0.157     -0.772 4.40e- 1   0.641      1.19
+```
+
+```r
+odds_and_conf
+```
+
+```
+## 
+## Logistic regression predicting Survived : 1 vs 0 
+##  
+##                     crude OR(95%CI)   adj. OR(95%CI)    P(Wald's test)
+## Age (cont. var.)    1.02 (1,1.04)     0.97 (0.94,1)     0.027         
+##                                                                       
+## Pclass (cont. var.) 0.13 (0.07,0.23)  0.11 (0.05,0.21)  < 0.001       
+##                                                                       
+## SibSp (cont. var.)  0.64 (0.48,0.85)  0.67 (0.46,0.96)  0.03          
+##                                                                       
+## Parch (cont. var.)  0.68 (0.53,0.87)  0.89 (0.65,1.2)   0.44          
+##                                                                       
+##                     P(LR-test)
+## Age (cont. var.)    0.023     
+##                               
+## Pclass (cont. var.) < 0.001   
+##                               
+## SibSp (cont. var.)  0.024     
+##                               
+## Parch (cont. var.)  0.433     
+##                               
+## Log-likelihood = -100.2653
+## No. of observations = 261
+## AIC value = 210.5306
+```
+
+```r
+aic
+```
+
+```
+## 
+## Model selection based on AICc:
+## 
+##            K   AICc Delta_AICc AICcWt Cum.Wt      LL
+## model      5 210.77       0.00      1      1 -100.27
+## null model 1 966.52     755.76      0      1 -482.26
+```
+
+```r
+McFaden_R2
+```
+
+```
+## 'log Lik.' 0.792092 (df=5)
+```
+
+```r
+class_table
+```
+
+```
+##          response
+## predicted   0   1
+##         0  34  13
+##         1  30 184
+```
+
+```r
+res
+```
+
+```
+## 
+## 	Pearson's Chi-squared test with Yates' continuity correction
+## 
+## data:  dataset_model$Survived and round(fitted(model), 0)
+## X-squared = 67.706, df = 1, p-value < 2.2e-16
+```
 
