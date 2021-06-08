@@ -1,6 +1,6 @@
 ---
-title: "Assignment 4: Logistic regression"
-author: "Marton Kovacs"
+title: "Assignment 6: Logistic regression"
+author: "Shani Pritzker"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -9,122 +9,735 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(haven)
+library(sqldf)
+library(knitr)
+library(pROC)
+library(ROCR)
+library(rms)
 ```
+### Solution ###
 
-# Background story
+In this project we will be dealing with classification models for predicting the survival probability of passengers on the Titanic. The setting for the problems is that we are given information about two passengers daughter and mother (Kate,Sue) and we are told that only Kate the daughter survived. We are also told that Leonardo, the husband and father was supposed to be on the trip but did not show up.Twenty years after the disaster Kate is suing Leonardo claiming that the fact he did not show up reduced the probability of sue's survival. We are asked to give a professional opinion if this claim is correct. In order to form an opinion we will conduct the proper analysis in order to answer the following questions:
 
-In this lab assignment you are going to work with data related to the survival of passengers of the RMS Titanic. “The sinking of the Titanic is one of the most infamous shipwrecks in history. On April 15, 1912, during her maiden voyage, the widely considered “unsinkable” RMS Titanic sank after colliding with an iceberg. Unfortunately, there weren’t enough lifeboats for everyone onboard, resulting in the death of 1502 out of 2224 passengers and crew. While there was some element of luck involved in surviving, it seems some groups of people were more likely to survive than others.” (Quote from the Kaggle Titanic Challenge).
 
-For the sake of this assignment, let’s imagine that you are called as an expert to a court case: Kate, one of the survivors of the Titanic accident is suing her __father, Leonardo, for not accompanying Kate and her mother Sue on the trip__ and this way decreasing their chances of survival. The family planned to move to the US back in 1912. __They bought 3rd class tickets for the three of them for 8 British Pounds each. (They did not get cabins with their 3rd class tickets.)__ The plan was that they embark in Southampton and all of them got on board, but Leonardo got separated from them in the rush of passengers during boarding. Later it turned out that Leonardo deliberately got separated from them and got off the boat before it’s departure, to run away and live with his mistress. __Kate was only 4 at the time, and Sue was 20.__ During the accident __Kate got on one of the last lifeboats and was later rescued, but there was no room for Sue on the lifeboat, and she did not survive the disaster.__
+* Which attributes affect the likelihood of survival.
+* What was the probability of survival for kate and sue .
+* What would be the survival probability of sue and kate if Leonardo was traveling 
 
-Now 20 years later Kate is suing her father for leaving them on the boat, because she thinks that this eventually led to Sue’s death, as the absence of Leonardo decreased their chances of survival.
-
-You are called in as an expert to this court case. Your task is to present a report about whether the presence of Leonardo statistically could have led to an improved chance of survival.
-
-# Dataset
-
-Use the data file called ‘assignment_4_dataset’, from the 'data/' folder.
-
-This is the training dataset of the Titanic dataset from the Kaggle Titanic Challenge (https://www.kaggle.com/c/titanic/overview), a prediction challenge for people who are just starting to learn about machine learning and other statistical prediction techniques. The following description is available for the dataset:
-
-## Metadata
-
-```{r echo = FALSE, warning = FALSE, message = FALSE}
-metadata <- readr::read_tsv(here::here("data/assignment_6_metadata.tsv"))
-
-metadata %>% 
-  knitr::kable()
-```
-
-# Task
-
-As usual, start with exploring your dataset. Do descriptive and exploratory analysis including visualization to understand the data and to see what type of data you are dealing with. 
-
-You should build a statistical model with which you can accurately estimate Kate’s and Sue’s chances of survival. First you should fit a statistical model (for example a logistic regression model) on the dataset, calculate the regression equation, and use that equation to compute the survival probability for Kate and Sue separately with and without having Leonardo on board the ship with them.
-
-You can use whichever predictor you would like, but you need to build a model that is at least as accurate so that it can correctly predict the outcome value within the sample with at least 72% accuracy for BOTH those who actually survived and who actually died in the disaster. You need to check this in the Classification table. So it is not enough to have 72% overall correct percentage! In order to be able to reach this prediction accuracy you might have to use some special predictors or to do some feature engineering. A comprehensive exploratory analysis including the visualisation of the relationship of different predictors might help in this. Keep in mind that this is one of the most popular prediction challenges on Kaggle, so there is plenty of discussion and guides on the web about different models and features. If you get stuck, you can look these up to improve your prediction performance.
-
-You do not need to check model assumptions in this assignment (but you can do so if you want to and this might help you improve your prediction performance). 
-
-# What to report
-
-When you have arrived at a satisfactory model describe the final model to the reader so that it is clear how is the model built up, and that based on the description the reader could reproduce your model.
-
-Report about the goodness of fit of the model, whether it is significantly better than the null model (based on the AIC and chi^2 test statistics), and how effective is your model at predicting the outcome (based on McFadden R^2, and the correct prediction percentages in the classification table of the final model). Be sure to report the total correct prediction percentage of the final model and also the correct prediction percentages separately for those who actually died, and those who actually survived.
-
-Also, report the statistics describing the coefficients of the predictors in a table format (for each predictor, this table should include the following: logit regression coefficients, Odds ratios, and 95% confidence intervals for the Odds ratios, Chi^2 test statistics and p values, and AIC values for the reduced models). 
-
-Report which were the most influential predictors in the model, and which were the predictors which did not seem to have unique added value to the model.
-
-Write up the regression equation of the model in the form of 𝑌 = 𝑏0 + 𝑏1 ∗ X1 + 𝑏2 ∗ X2 +…+ bn * Xn, in which you use the actual regression coefficients of your models. (b0 stands for the intercept and b1, b2 … bn stand for the model coefficients for each of the predictors, and X1, X2, … Xn denote the predictors).
-
-Finally, report the predicted probability of survival for Kate and Sue separately with and without having Leonardo on board the ship with them. (So you will have to estimate 4 probabilities in total, two for Kate and two for Sue). It is important that this is in the probability scale (since the jury does not know what logit means and how to interpret it).
-
-# What to discuss
-
-In your discussion of the findings, briefly interpret the results of the above analyses in light of the court case. Based on your results do you find it likely that the presence of Leonardo (spouse to Sue and parent to Kate) would have improved the survival chances of Sue and Kate? What is the best predictor of survival in the model and how does the presence of a spouse and presence of a parent compare to its influence?
-
-# Solution
 
 ## Read the data
 
-Read the dataset used in this assignment. Pay attention to the extension of the datafile.
+
 
 ```{r}
+
+train <- read_sav( file = "https://github.com/elte-ppk-r-course/public_r_data_analysis_2021_spring/raw/master/data/assignment_6_dataset.sav" )
+
 
 ```
 
 ## EDA
 
+We will begin with some descriptive statistics in order to understand which variables we have in our data set, see what are their types (discrete/continuous), how the data is distributed and get a an initial understanding of which variables seem to be predictive.The variables
+that we have include ,class,sex,age,sisbp(number of siblings or spouse),parch(number of parents or children),ticket fare, cabin and port where the passenger embarked. Our target variable is survive indicating whether the passenger survived.
+
+
+$\underline{Survive:}$
+
+We can see in the table below that the probability that a random passenger died is almost double of the probability he survived.
+
 ```{r}
+
+t<-sqldf("select Survived
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      from train
+      group by Survived
+      
+      ")
+
+kable(t,caption="Surviver distribution in our sample")
 
 ```
 
-## Clean the data
+$\underline{Sex:}$
+
+Looking in the table below we can see that about two thirds of the passengers are male, we can also see that thier survival rates are much lower then those of females. A random female is about 4 times more likely to survive then a random male, this indicates that this variable has strong predictive power and is somethig we would like to use in the model.
+
 
 ```{r}
+
+t<-sqldf("select Sex
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by Sex
+      
+      ")
+
+kable(t,caption="Surviver distribution in our Sex")
+
+```
+
+
+
+$\underline{Pclass:}$
+
+Looking at the table below we can see that the majority of passengers were from third class (a little over 50%) ,second and first class are relatively close (21% and 24%). We can see that in terms of survival rates third class passengers have the lowest survival probability while first class has the highest survival rates. Like the variable sex this also seems like a variable that has strong predictive power and should be used in the model.
+
+```{r}
+
+t<-sqldf("select Pclass
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by Pclass
+      
+      ")
+
+kable(t,caption="Surviver distribution in our Pclass")
+
+```
+
+
+$\underline{Embarked:}$
+
+
+Looking at the table below we can see we have 2 missing values, this is not significant but will be dealt with by replacing them with the category which is most common(Southampton). We can see that most passengers boarded the ship at Southampton and that Cherbourg has highest survival rate, this is propably due to the fact that passengers boarding in Cherbourg tend to be from first class which we already saw had higher survival rates. 
+
+```{r}
+
+t<-sqldf("select Embarked
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by Embarked
+      
+      ")
+
+kable(t,caption="Surviver distribution  Embarked")
+
+```
+
+
+$\underline{Age:}$
+
+```{r}
+
+#number of missing age values
+sum(is.na(train$Age)==TRUE) 
+
+```
+
+
+missing values - we have 177 missing values this will be dealt by one of 3 options:
+
+1) Binning the data and turning it in to a discrete variable where one of the category covers missing values.
+
+2) Replacing the data with some statistic like the average or the model.
+
+3) Removing the rows that have a missing value
+
+We will use option two.
+
+
+
+Below we can see a boxplot of age according to survival. Each box represents the distribution of age ,on the left people who died and on the right people who survived. The lower bottom of the box represents the 25 percentile, the middle line represents the 50 percentile and the top line represents the 75 percentile. The idea of this graph is to see how far are the two distributions , the further they are the more likely the variable (in this case age) has predictive power. 
+
+note: 177 missing values are not included in the boxplot.
+
+```{r}
+options(warn=-1)
+train$survived_c[train$Survived==1]<-"yes"
+train$survived_c[train$Survived==0]<-"No"
+
+ggplot(train,aes(x=survived_c,y=Age,color=survived_c))+geom_boxplot()+ggtitle("Age distribution by survival")
+
+
+
+
+```
+
+
+$\underline{Fare:}$
+
+Below we can see a boxpot of Fare, we can see that people who paid a higher price for their ticket had higher survival rates, this is not surprising given the fact we saw that first class passengers also had high survival rates and it makes sense that first class paid more.
+
+```{r}
+options(warn=-1)
+train$survived_c[train$Survived==1]<-"yes"
+train$survived_c[train$Survived==0]<-"No"
+
+ggplot(train,aes(x=survived_c,y=Fare,color=survived_c))+geom_boxplot()+ggtitle("Fare distribution by survival")
+
+```
+
+
+$\underline{Cabin:}$
+
+Since the variable contains many unique values and is not numeric we wont use its original form in the model instead we will create an indicator stating whether a passenger has a cabin.We can see below that the majority of passengers didn't have a cabin and that those that did had much higher survival rates, this is not surprising because having a cabin implies that you likely came from first class. 
+
+
+```{r}
+
+train$Cabin_ind[train$Cabin!=""]<-1
+train$Cabin_ind[train$Cabin==""]<-0
+
+t<-sqldf("select Cabin_ind
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by Cabin_ind
+      
+      ")
+
+kable(t,caption="Surviver distribution in by Cabin_ind")
+
+```
+
+
+$\underline{Parch:}$
+
+Looking below we see that most passengers had between 0-1 parents and children. those with no parents and no children are less likely to survive.
+
+
+```{r}
+
+
+
+t<-sqldf("select Parch
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by Parch
+      
+      ")
+
+kable(t,caption="Surviver distribution in by Parch")
+
+```
+
+
+$\underline{Sibsp:}$
+
+Below we can see the survival rates according to sibsp. Based on this alone we see there might be justification for Kate's claim i.e if the only data we had was sibsp(sibling and spouse) we would have said Leonardo could have raised the probability of Sue's survival. The reason for this is that in the original situation Sue was only traveling with Kate (sibsp=0) so she had 0.34 chance of survival. If Leonardo was on the ship (sibsp=1) she would have had a 0.53 chance of surviving, this of course may change when we test other variables which may be stronger and indicate that sue was likely to die with or without leonardo.
+
+
+```{r}
+
+
+
+t<-sqldf("select SibSp
+      ,count(*)cnt
+      ,round(cast(count(*) as float)/cast(891 as float),2)pct
+      ,sum(Survived)survived_cnt
+      ,avg(Survived)survived_pct
+      from train
+      group by SibSp
+      
+      ")
+
+kable(t,caption="Surviver distribution in by SibSp")
+
+```
+
+
+
+
+
+
+## Clean the data
+
+The two tables below show the amount of NA in each column and the amount of missing values in each column.We have 177 passengers with NA as age, what we will do is replace them with the mean. We also have 2 passengers with missing values for embarked, what we will do is replace them with the mode. The 687 observations with missing cabin were already taken care of when we constructed the the indicator variable for cabin
+
+```{r}
+
+colSums(is.na(train)) 
+train$Age[is.na(train$Age)==TRUE]<-29.699
+colSums(train=="")
+
+#avg age 
+mean(train$Age[is.na(train$Age)==FALSE])
+
+
+
+train$Embarked[train$Embarked==""]<-"S"
 
 ```
 
 ## Creating a datatable for Sue, Kate, and Leonardo
 
+Below we can see a table with five rows , the first two rows are sue, rows three and four are kate
+and the fifth row is Leonardo.The first row of Sue and kate represent thier original situation without Leonardo.
+
+Note: For Leonardo we did not get the age so we estimated with the average.
+THe difference between having Leonardo on the ship and not having him can be seen in row two
+where sue has sibsp=1 instead of 0 and row four where kate has parch=2 instead of 1.
+
+
 ```{r}
+
+#first two rows are for sue 
+#rows 3-4 are for kate 
+#row 5 for Leonardo
+
+#the first row of sue and kate is the original situation
+
+
+PassengerId<-c(69655371,
+               69655372,
+               69655373,
+               69655374,
+               69655375)
+
+Survived<-c(0,0,1,1,1)
+
+Pclass<-c(3,3,3,3,3)
+
+Name<-c("sue_original"
+        ,"sue_with_leo"
+        ,"kate_original"
+        ,"Kate_with_leo"
+        ,"leo")
+
+
+Sex<-c("female","female","female","female","male")
+
+Age<-c(20,20,4,4,29.69)
+
+SibSp<-c(0,1,0,0,1)
+
+Parch<-c(1,1,1,2,1)
+
+Ticket<-c("","","","","")
+
+Fare<-c(8,8,8,8,8) 
+
+Cabin<-c("","","","","")
+
+
+Embarked<-c("S","S","S","S","S")
+
+Cabin_ind<-c(0,0,0,0,0)
+
+sue_kate_leo<-data.frame(PassengerId,
+                         Survived,
+                         Pclass,
+                         Name,
+                         Sex,
+                         Age,
+                         SibSp,
+                         Parch,
+                         Ticket,
+                         Fare,
+                         Cabin,
+                         Embarked,
+                        Cabin_ind)
+
+
+kable(sue_kate_leo,caption="sue_kate_leo_data")
 
 ```
 
 ## Building the null model
 
-```{r}
+We start by building a Null model. A null model is a model that does not use the explanatory variable only an intercept.What the null model does is ignore all the possible predictors we have and gives a predicted survival propbility according to the survival rate in the sample. We saw in the beginning that the survival rate was 0.38 so this is the prediction the null model will give all the passengers.
+
+```{r,message=FALSE}
+mylogit_nul_model <- glm(Survived ~ 1, data = train, family = "binomial")
+summary(mylogit_nul_model)
+train$null_model_pred<-predict(mylogit_nul_model,train, type="response")
+anova(mylogit_nul_model, test="Chisq")
+
+auc(roc(train$Survived,predict(mylogit_nul_model,train, type="response")))
+
 
 ```
 
 ## Building the model
 
-```{r}
+We first start with a simple model only containing the variable Sibsp with binned categories.
+In the binned variable we have two categories, 0- no siblings or spouse and 1 - one or more siblings or spouse. The reason for this split is that we are interested in the transition which is relevent for sue and that is from 0 to 1.
+
+```{r,message=FALSE}
+
+train$Survived<-as.factor(train$Survived)
+train$Pclass<-as.factor(train$Pclass)
+train$Sex<-as.factor(train$Sex)
+
+train$Parch_split[train$Parch==0]<-0
+train$Parch_split[train$Parch==1]<-1
+train$Parch_split[train$Parch>1]<-2
+
+
+train$Sibsp_split[train$SibSp==0]<-0
+train$Sibsp_split[train$SibSp>0]<-1
+
+train$Parch_split<-as.factor(train$Parch_split)
+train$Sibsp_split<-as.factor(train$Sibsp_split)
+
+
+mylogit_chosen_model1 <- glm(Survived ~ 
+                              Sibsp_split
+                              
+                              , data = train, family = "binomial")
+summary(mylogit_chosen_model1)
+
+auc(roc(train$Survived,predict(mylogit_chosen_model1,train, type="response")))
+anova(mylogit_chosen_model1, test="Chisq")
 
 ```
 
-# Check the assumptions
+Looking above we can see the output of the model.The model is statistically significant but does not seem very strong (auc 0.55). the coefficient of the binned variable is positive indicating that moving from 0 to 1+ increases the survival probability,having said that we need to remember that many variables were not considered and could change our conclusions, that is why we will try a model with more variables.
+
+
+
+
+
+
+
+Looking below we can see a model that in addition to having the binned sibsp has age,sex and class, we can see that all the variables are significant except sibsp indicating that given extra information the importance of sibsp becomes unclear, moreover we see that that sibsp sign of the coefficient has changed contradicting kate's claim. It is important to note that the aic was lower and auc higher for this model, meaning this model is stronger and that adding of variables was justified.
+
+```{r,message=FALSE}
+
+mylogit_chosen_model2 <- glm(Survived ~ Age+
+                              Pclass+
+                              Sex+
+                              Sibsp_split
+                              #+Embarked 
+                              #Parch_split
+                              , data = train, family = "binomial")
+summary(mylogit_chosen_model2)
+
+auc(roc(train$Survived,predict(mylogit_chosen_model2,train, type="response")))
+anova(mylogit_chosen_model2, test="Chisq")
+
+train$mylogit_chosen_model2_pred<-predict(mylogit_chosen_model2,train, type="response")
+
+
+
+
+
+
+
+
+
+
+
+```
+
+
+
+Looking below we can see our chosen model which is the same as the previous model only here we use the variable sibsp in its original form i.e as a continuous variable and not binned.
+The model includes two discrete variables (sex,class) and two continues variables (age,sibsp) 
+
+
+```{r,message=FALSE}
+
+
+mylogit_chosen_model3 <- glm(Survived ~ Age+
+                              Pclass+
+                              Sex+
+                              SibSp
+                              #+Embarked 
+                              #Parch_split
+                              , data = train, family = "binomial")
+summary(mylogit_chosen_model3)
+
+auc(roc(train$Survived,predict(mylogit_chosen_model3,train, type="response")))
+anova(mylogit_chosen_model3, test="Chisq")
+
+train$mylogit_chosen_model3_pred<-predict(mylogit_chosen_model3,train, type="response")
+
+
+
+```
+
+
+As we recall we are using logistic regression meaning we get the probability of y=1 i.e probability
+of surviving. In order for us to use it as a classification tool we need to choose some cutoff point so when a prediction is higher we classify the passenger as surviving and when the prediction is lower we classify the passenger as dying. In order to choose optimal cutoff
+we look at the amount of overall correct prediction for every cutoff between 0-1 with 0.01 levels.
+the table below presents the following:
+
+
+cutoff- cutoff
+
+tp -true positive i.e survived and predicted survival
+
+tn- true negative i.e  died and predicted death
+
+fp- died but predicted survival
+
+fn-survived but predicted death
+
+total_correct_pct- correct classification percent
+
+correct_from_sur- correct classification rate for those who survived
+
+correct_from_death- correct classification rate for those who died
+
+
+$\underline{chosen\space cutoff::}$
+
+
+If we take 0.44 as our cutoff we get 78% correct classification for all passengers,76% correct classification for those who survived and 79% correct classification for those who died, which is in the range requested in the assignment.
+
+the aUC of the model is 0.85
 
 ```{r}
 
+
+                          #tp surivied and predicted survival
+                          #tn died and predicted death
+                          #fp died but predicted survival
+                         #fn survived but predicted death
+
+pos_cut<-seq(0,1,0.01)
+
+cutoff_mat<-data.frame()
+for (i in 1:length(pos_cut)){
+  tp<-sum(train$Survived==1 & train$mylogit_chosen_model2_pred>pos_cut[i])
+  tn<-sum(train$Survived==0 & train$mylogit_chosen_model2_pred<=pos_cut[i])
+  fp<-sum(train$Survived==0 & train$mylogit_chosen_model2_pred>pos_cut[i])
+  fn<-sum(train$Survived==1 & train$mylogit_chosen_model2_pred<=pos_cut[i])
+
+  
+cutoff_mat<-rbind(cutoff_mat,c(pos_cut[i]
+                               ,tp
+                               ,tn
+                               ,fp
+                               ,fn
+                               ,(tp+tn)/(tp+tn+fp+fn)
+                               ,tp/(tp+fn)
+                               ,tn/(fp+tn)
+                               )) 
+
+names(cutoff_mat)<-c("cutoff","tp","tn","fp","fn","total_correct_pct","correct from sur","correct from deth")
+  
+    
+}
+
+
+
+kable(cutoff_mat,caption="optimal cutoff")
+
+
 ```
+
+
+
+
+Note: we tried adding parch to the model but it did not have a statistically significant coefficient.
+
+
+
+```{r,message=FALSE}
+
+
+mylogit_chosen_model4 <- glm(Survived ~ Age+
+                              Pclass+
+                              Sex+
+                              SibSp
+                              #+Embarked 
+                              +Parch_split
+                              , data = train, family = "binomial")
+summary(mylogit_chosen_model4)
+
+mylogit_chosen_model5 <- glm(Survived ~ Age+
+                              Pclass+
+                              Sex+
+                              SibSp
+                              #+Embarked 
+                              +Parch
+                              , data = train, family = "binomial")
+summary(mylogit_chosen_model5)
+
+
+
+```
+
+
+
+
+
+# Logisitc regression assumptions and method
+Checking assumptions is not mandatory according to the assignment so we wont check everything , especially due to the fact that our chosen model is significant, we will state the important assumptions for logistic regression.
+
+$\underline{About\space Logistic\space Regression:}$
+
+We are dealing with logistic regression , specifically binary logistic regression. Here we try to predict the probability that an independent binary variable will equal 1.The idea is that we assume there exists a linear relationship between the predictors and the log of the odds(probability 1 divived probability 0)
+
+
+
+${log(\frac{p(y=1)}{p(y=0)})=b0+b1+b2+...}$ using algebra we can isolate the propability part of the expression
+
+${p(y=1)=\frac{exp(bo+b1+b2+..)}{1+exp(b0+b1+b2..)}}$
+
+
+$\underline{assumption\space of\space Binary\space Logistic\space Regression:}$
+
+1)Target variable is binary.
+
+2)Observations are independent of each other.
+
+3)Independent variables should not be too highly correlated with each other.
+
+4)Linearity of independent variables and log odds.
+
+$\underline{Choosen \space model\space representation}$
+
+${log(\frac{p(y=1)}{p(y=0)})=intercept+age*b1-pclass2*1.189-pclass3*2.347-sexmale*2.74+sibsp*(-0.358)}$
+
+${log(\frac{p(y=survived)}{p(y=died)})=-4.02-0.0398*age-1.189*pclass2-2.347*pclass3-2.74*sexmale-0.358*sibsp}$
+
+
+note that when we have categorical variables the logistic regression takes one category and treats it as a reference group , after that it creates a dummy variable for each one of the other categorys. In our case these are the dummy variables:
+
+
+pclass2- indicator variable 1 if passenger is in class 2
+
+
+pclass3- indicator variable 1 if passenger is in class 3
+
+
+sexmale- indicator variable 1 if passenger is male
+
+example: the variable sex has two categories, female is used as reference and a dummy variable is created for the group of males(sexmale). the coefficient is -2.74 i.e negative meaning that if two passengers are the same in every variable except gender then the probability of the male surviving will be lower.
+
 
 # Compare the models
 
-```{r}
+Looking below we can see a summary comparing important information about the null model and our chosen model.We can see auc,aic,mcfadden R^2.From the table below we see that the aic is lower  and auc is higher for our model indicating that our model has stronger predicting power.
+
+
+```{r,message=FALSE}
+aic<-c(mylogit_nul_model$aic,mylogit_chosen_model3$aic)
+aucc<-c(auc(roc(train$Survived,predict(mylogit_nul_model,train, type="response")))
+,auc(roc(train$Survived,predict(mylogit_chosen_model3,train, type="response"))))
+
+modell<-c("Null model","Chosen model")
+
+comp<-data_frame(modell,aic,aucc)
+ 
+kable(comp,caption="Model comparison by auc and aic")
 
 ```
 
+
+
+
+```{r,message=FALSE}
+
+lrm(formula = Survived ~ Age + Pclass + Sex + SibSp, data = train)
+
+
+paste("McFadden’s R squared is ",1-logLik(mylogit_chosen_model3)/logLik(mylogit_nul_model))
+
+```
+
+
+
 # Calculate odds ratio and confidence interval
 
-```{r}
+
+As mentioned before the chosen model has 4 variables (class,age,sex,sibsp).  We chose a cutoff of 0.44 which gave us 261 survives that were classified correctly,439 casualties that were classified correctly (700/891 78.5% correct classification overall) From those who survived we have 261/342 correct classification i.e 76%, for casualties we have 439/542 correct classification i.e 79% correct classification.
+
+Looking below we can see a table that gives a summary of our chosen model.The table shows the coefficient estimate ,odds ratio (obtained by exponential of the coefficient values) ,confidence intervals,test statistics for checking coefficient significance, pvalue of tests, and aic for reduced models (obtained by running separate regression for each variable by itself and getting the aic)
+
+```{r,message=FALSE}
+coefficent_name<-row.names(summary(mylogit_chosen_model3)$coefficients)[2:6]
+coeficcent_values<-mylogit_chosen_model3$coefficients[2:6]
+odds_ratio<-exp(coef(mylogit_chosen_model3))[2:6]
+confidence_iL<-exp(confint(mylogit_chosen_model3,level = 0.95))[2:6,1]
+confidence_iU<-exp(confint(mylogit_chosen_model3,level = 0.95))[2:6,2]
+test_statistic_of_coeficent<-summary(mylogit_chosen_model3)$coefficients[,3][2:6]
+p_values<-summary(mylogit_chosen_model3)$coefficients[,4][2:6]
+
+
+
+
+
+
+
+train$pclass2[train$Pclass==2]<-1
+train$pclass2[train$Pclass!=2]<-0
+
+train$pclass3[train$Pclass==3]<-1
+train$pclass3[train$Pclass!=3]<-0
+
+
+train$sexmale[train$Sex=="male"]<-1
+train$sexmale[train$Sex!="male"]<-0
+
+
+train$pclass2<-as.factor(train$pclass2)
+train$pclass3<-as.factor(train$pclass3)
+train$sexmale<-as.factor(train$sexmale)
+
+
+
+
+aic_age<-glm(Survived ~ Age
+         , data = train, family = "binomial")$aic
+
+aic_pclass2<-glm(Survived ~ pclass2
+         , data = train, family = "binomial")$aic
+
+aic_pclass3<-glm(Survived ~ pclass3
+         , data = train, family = "binomial")$aic
+
+aic_sexmale<-glm(Survived ~ sexmale
+         , data = train, family = "binomial")$aic
+
+
+aic_sibsp<-glm(Survived ~ SibSp
+         , data = train, family = "binomial")$aic
+
+aic_reduced_model<-c(aic_age,aic_pclass2,aic_pclass3,aic_sexmale,aic_sibsp)
+
+
+final_table<-data.frame(coefficent_name,
+                        coeficcent_values,
+                        odds_ratio,
+                        confidence_iL,
+                        confidence_iU,
+                        test_statistic_of_coeficent,
+                        p_values,
+                        aic_reduced_model)
+
+
+kable(final_table,caption="Chosen model final table")
+  
 
 ```
 
 # Report the results
 
+$\underline{Predictions\space for\space Sue\space Kate\space and\space Leonardo:}$
+
+The chosen model which seemed to have the best prediction accuracy did have the variable sibsp but we can see the sign is negative indicating that the more siblings and spouses you have on the ship the less likely you are to survive(which is the opposite of kate's claim).In addition we saw that the movement from 0 to 1 in the variable sibsp (which sue would have experienced if leonardo would have joined the trip)does increase the chance of survival but that the change is not significant in a model including other stronger variables like class. The variable parch was not found as a significant variable in the model.
+
+We can see in the table below that because sibsp has a negative sign leonardo joining the trip actually reduced the chance of sues survival. From the results it seems that there is not enough evidence to conclude without a doubt that leonardo joining the trip would have raised the probability of sues survival,which is why would advise to reject the lawsuit.It seems more like the fate of sue is related to the fact she was a third class passenger and not a child then the fact leonardo was not on board. The fact that parch is not significant and not in the model results in the same survival probability for kate with or without leonardo. Leonardo has very low chance of survival because he is a man in third class and not a child.
+
 ```{r}
 
-```
 
+sue_kate_leo$Pclass<-as.factor(sue_kate_leo$Pclass)
+sue_kate_leo$Sex<-as.factor(sue_kate_leo$Sex)
+
+
+sue_kate_leo$propabiliy_survival_modell<-predict(mylogit_chosen_model3,sue_kate_leo, type="response")
+
+kable(data.frame(sue_kate_leo$Name,sue_kate_leo$propabiliy_survival_modell),caption="Chosen model final table")
+```
