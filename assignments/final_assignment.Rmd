@@ -15,6 +15,7 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(viridis)
+library(glmm)
 
 theme_set(theme_light())
 ```
@@ -34,9 +35,11 @@ emperors_raw <- emperors_raw %>%
   mutate(
     birth_cty = as.factor(birth_cty),
     birth_prv = as.factor(birth_prv),
+    #relevel the factors
     rise = fct_relevel(rise, 
                             "Seized Power", "Appointment by Army", "Appointment by Praetorian Guard", "Purchase",
                             "Election", "Appointment by Senate", "Appointment by Emperor", "Birthright"),
+     #relevel the cause of death
     cause = fct_relevel(cause, 
                              "Natural Causes", "Assassination", "Execution",  "Suicide", "Died in Battle",
                               "Captivity"),
@@ -47,18 +50,22 @@ emperors_raw <- emperors_raw %>%
   select(-name_full, -notes, - verif_who)
 
 emperors <- emperors_raw %>%
+#As the dataset contains BC years it is necessary to recode them
+#Firstly set the dates to years only
   mutate(
     birth_year = as.numeric(format(birth, '%Y')),
     death_year = as.numeric(format(death, '%Y')),
     reign_start_year = as.numeric(format(reign_start, '%Y')),
     reign_end_year = as.numeric(format(reign_end, '%Y'))) %>%
+#Recode BC years as negative numbers and AC years as positive numbers
   mutate(
     birth_year = ifelse(birth_year > death_year, (birth_year * -1), (birth_year * 1)),
     reign_start_year = ifelse(reign_start_year > reign_end_year, (reign_start_year * -1), (reign_start_year * 1)),
     age_reign_start = reign_start_year - birth_year,
     age_reign_end = reign_end_year - birth_year,
+#The years of the emperors' reign
     reign_long_year = reign_end_year - reign_start_year,
-    reign_long_cat = cut(reign_long_year, breaks = c(-Inf, 1, 10, 20, Inf), labels = c("0 - 1 year", "2 - 10 years", "10 - 20 years", "20 years or more")),
+#Wich century did the emperor rule?
     century = reign_end_year %/% 100 + 1)
 ```
 
@@ -68,7 +75,7 @@ emperors <- emperors_raw %>%
 The emperors rised to and fall out of power by many reasons, so I investigate the causes how they followed each other.
 
 ``` {r}
-
+#Putting the emperors on a timeline, based on the fact how they rose to power and which dynasty they did belong
 rise_emperors <- ggplot(emperors, aes(reign_start_year, rise, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
   scale_x_continuous(breaks = c(-26, 305, 395),
@@ -78,7 +85,7 @@ rise_emperors <- ggplot(emperors, aes(reign_start_year, rise, color = dynasty, s
   labs(title = "The Rise of Emperors") +
   scale_color_viridis_d()
   
-
+#Putting the emperors on a timeline, based on the fact how they fall out of power and which dynasty they did belong
 fall_emperors <- emperors %>%
   ggplot(aes(reign_end_year, cause, color = dynasty, shape = era)) +
   geom_point(alpha = 0.5) +
@@ -89,14 +96,9 @@ fall_emperors <- emperors %>%
   labs(title = "The Fall of Emperors") +
   scale_color_viridis_d()
 
-
 rise_emperors
 
 fall_emperors
-
-rise_and_fall <- emperors %>%
-  count(rise, cause) %>%
-  view()
 
 rise_and_fall2 <- emperors %>%
   ggplot(aes(rise, fill = cause)) +
@@ -113,19 +115,6 @@ rise_and_fall2
 death_types <- emperors %>%
   count(cause, killer) %>%
   view()
-
-fall_and_rule <- emperors %>%
-  ggplot(aes(reign_long_cat, fill = cause)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme(legend.position = "bottom") +
-  xlab("The ruling time of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Fall of the Roman Emperors") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
-
-fall_and_rule
-
 
 died_by <- emperors %>%
   ggplot(aes(fct_rev(cause), fill = killer)) +
@@ -146,7 +135,6 @@ died_by
 
 ## The duration of the reign
 
-The age of emperors and the duration of the raign varied. So I take a look at how they relate to each other. 
 
 ``` {r}
 age_and_long <- emperors %>%
@@ -178,116 +166,65 @@ death_and_long
 
 ## Recoding the data and prepare it for the predictive models
 
-Filtering the data for the Principate era only as in the Dominate era there were 4 rulers at once
-Recoding the variable Cause:
--- Making one category form Captivity and Died in Battle: Battle
--- Making one category from Assassination, Suicide, Execution: Forced
-Recoding the variable Killers
--- Making one category from Aneurism and Heart Failure: Health
--- Making one category from Lightning, Fire: Natural disaster
-Removing missing datas in the variable Cause
-Removing the emperors rising by Purchase or Election??
-
 
 ```{r}
-emperors %>%
-  filter(rise == "Purchase" | rise == "Election") %>%
-  select(index, name, era) %y%
-  view()
-
-emperors %>%
-  group_by(rise) %>%
-  count(killer) %>%
-  view()
 
 emperors_principate <- emperors %>%
+#Filtering the data for the Principate era only as in the Dominate era there were 4 rulers at once
   filter(era == "Principate") %>%
   select(-birth, -death, -birth_cty, -birth_prv, -reign_start, -reign_end, -era) %>%
   mutate(
+#recode cause into three categorical level
+#Making one category form Captivity and Died in Battle: Battle
+#Making one category from Assassination, Suicide, Execution: Forced  
     cause_recoded = recode(cause, "Died in Battle" = "Battle", "Captivity" = "Battle", "Assassination" = "Forced", "Suicide" = "Forced", "Execution" = "Forced"),
-    killer_recoded = recode(killer, "Aneurism" = "Health", "Heart Failure" = "Health", "Disease" = "Health", "Lightning" = "Natural Phenomenon", "Fire" = "Natural Phenomenon", "Wife" = "Other Opponents", "Court Officials" = "Other Opponents", "Usurper" = "Other Opponents"),
+#Recoding the factor killer
+#Making one category from Aneurism and Heart Failure: Health
+#Making one category from Lightning, Fire: Natural disaster
+    killer_recoded = recode(killer, "Aneurism" = "Health", "Heart Failure" = "Health", "Disease" = "Health",
+                            "Lightning" = "Natural   Phenomenon", "Fire" = "Natural Phenomenon", "Wife" = "Other Opponents",
+                            "Court Officials" = "Other Opponents", "Usurper" = "Other Opponents"),
+#Making dummy variables from the cause_recoded
     died_by_force = recode(cause_recoded, "Forced" = 1, "Battle" = 0, "Natural Causes" = 0),
     died_by_battle = recode(cause_recoded, "Forced" = 0, "Battle" = 1, "Natural Causes" = 0),
     died_naturally = recode(cause_recoded, "Forced" = 0, "Battle" = 0, "Natural Causes" = 1)
     ) %>%
-  select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year)
+  dplyr:: select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year) %>%
+#Removing missing data  
+  na.omit()
 
-rise_and_fall_principate <- emperors_principate %>%
-  ggplot(aes(rise, fill = cause_recoded)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme(legend.position = "bottom") +
-  xlab("The rise of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Rise and Fall of the Roman Emperors in the Principate") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
-
-
-rise_and_fall_principate
-
-rise_and_fall_principate2 <- emperors_principate %>%
-  ggplot(aes(rise, fill = killer_recoded)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme(legend.position = "bottom") +
-  xlab("The rise of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Rise and Death of the Roman Emperors in the Principate") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The killers")
-
-rise_and_fall_principate2
-
-fall_and_rule_principate <- emperors_principate %>%
-  ggplot(aes(reign_long_cat, fill = cause_recoded)) +
-  geom_bar(width = 0.3) +
-  coord_flip() +
-  theme(legend.position = "bottom") +
-  xlab("The ruling time of the emperors") +
-  ylab(NULL) +
-  labs(title = "The Fall of the Roman Emperors") +
-  scale_fill_viridis(discrete = TRUE, na.value = "grey", name = "The cause of death")
-
-fall_and_rule_principate
 ```
-
-
 
 ## Probabilities of dying by force, battle, or natural causes
 
-Kérdések: ha egy bizonyos idő eltelik, akkor el teszik-e az uralkodót láb alól?
-mi a predikciója az erővel való meghalásnak
+As the emperors have fallen by many reasons it must be interesting to find out, which factors can predict the death of emperors. 
 
 ``` {r}
-emperors_principate %>%
-  count(cause_recoded) %>%
-  view()
-
-model_forced <- glm(died_by_force ~ rise + century + age_reign_start + reign_long_cat, family = "binomial")
-
+#null model for modelling the predictors of dying by force
+model_forced_null <- glm(died_by_force ~ 1, data = emperors_principate, family = binomial)
+summary(model_forced_null)
+#enter all the variables into the model
+model_forced <- glm(died_by_force ~ rise + century + age_reign_start + reign_long_year, data = emperors_principate, family = binomial)
 summary(model_forced)
 
-ggplot(emperors_principate, aes(reign_long_year, died_by_force)) +
-  geom_point() +
-  facet_wrap(vars(reign_long_cat)) +
-  geom_smooth(method = "glm", 
-     color = "blue",
-     se = FALSE, 
-     method.args = list(family = binomial))
+#null model for modelling the predictors of dying in battle
+model_battle_null <- glm(died_by_battle ~ 1, data = emperors_principate, family = binomial)
+summary(model_battle_null)
+#enter all the variables into the model
+model_battle <- glm(died_by_battle ~ rise + century + age_reign_start + reign_long_year, data = emperors_principate, family = binomial)
+summary(model_battle)
 
+#null model for modelling the predictors of dying naturally
+model_natural_null <- glm(died_naturally ~ 1, data = emperors_principate, family = binomial)
+summary(model_natural_null)
+#enter all the variables into the model
+model_natural <- glm(died_naturally ~ rise + age_reign_start, data = emperors_principate, family = binomial)
+summary(model_natural)
 ```
 
-## Predicting the killers
-
-As the plots shows the "biggest" killers in the Romanian Emperor were the senate, the Praetorian Guard, the Emperor's Army and another person who wanted to be Emperor.
-So whom we should be careful of?
+The AIC number of the fitted models was only higher in the case of the predictive model of dying naturally (fitted model: 52.224, null model: 55.413). This means that the variance in the case of dying in battle or by force cannot be explained by the variables in the dataset, so I will continue to work on the model related to dying naturally.
 
 ``` {r}
 
-model_natural <- glm(died_naturally ~ rise + century + age_reign_start + reign_long_cat, data = emperors_principate, family = "binomial")
-
-summary(model_natural)
 
 ```
-
-## Predicting the killer when falling by force
-
