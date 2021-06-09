@@ -16,14 +16,10 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-install.packages("tidyverse")
-install.packages("dplyr")
-install.packages("janitor")
+
 library(tidyverse)
 library(dplyr)
 library(janitor)
-
-
 
 ```
 
@@ -52,19 +48,24 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 
 ```{r}
 #We first separate the ingredients in multiple rows
-cocktail_s <-  separate_rows(cocktail, ingredients, sep = "<b4/>", convert = TRUE)
-cocktail_s2 <- separate_rows(cocktail_s, ingredients, sep = "<br/>", convert = TRUE)
-cocktail <- separate_rows(cocktail_s2, ingredients, sep = "<br>", convert = TRUE)
+cocktail_s <-  separate_rows(cocktail,ingredients, 
+                             sep = "<b4/>", convert = TRUE)
+cocktail_s2 <- separate_rows(cocktail_s, ingredients, 
+                             sep = "<br/>", convert = TRUE)
+cocktail <- separate_rows(cocktail_s2, ingredients, 
+                          sep = "<br>", convert = TRUE)
 # Verify all the ingredients are in individual rows
 print(cocktail$ingredients)
-
 ```
+
+Remove all quantities
 ```{r}
-#We remove all types of quantities and all alchohol content e.g 40% abv and 100-proof
+#We remove all types of quantities and all alcohol content e.g 40% abv and 100-proof
 
 c_cocktail <-
   cocktail %>%
-  mutate(ingredients = gsub(".*oz|[0-9]|bsp|dashes|dash|drop|drops|-proof|\\(.*", "", ingredients)) %>%
+  mutate(ingredients =
+           gsub(".*oz|[0-9]|bsp|dashes|dash|drop|drops|-proof|\\(.*", "", ingredients)) %>%
   mutate(ingredients = str_to_lower(ingredients))%>%
   mutate(ingredients = str_trim(ingredients, side = "both"))
   
@@ -119,7 +120,7 @@ Count the number of ingredients and filter all the cocktails that has that many.
 # Group by cocktail and count all distinct ingredients, then sort them by frequency and then filter the cocktails with the most ingredients
 number_ingredients <- c_cocktail %>%
   group_by(name) %>%
-  summarize(count_ing = n_distinct(ingredients)) %>%
+  dplyr::summarize(count_ing = n_distinct(ingredients)) %>%
   arrange(desc(count_ing)) %>%
   filter(count_ing == max(count_ing))
   
