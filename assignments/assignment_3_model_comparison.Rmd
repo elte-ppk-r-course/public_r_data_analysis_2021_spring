@@ -543,4 +543,4 @@ AIC(s_model2, c_modelupdate_no)
 
 Based on AIC values, the complex model is the better model.
 
-In conclusion, the complex model incremented in 35% its explanation of the variance compared to the simple model.
+In conclusion, the complex model incremented in 35% its explanation of the variance compared to the simple model. The predictors Sex, pain catastrophizing and cortisol saliva contributed significantly to the model to predict postoperative pain.
