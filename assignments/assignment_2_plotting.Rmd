@@ -18,6 +18,7 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+# Required packages
 library(tidyverse)
 library(tidytuesdayR)
 library(scales)
@@ -50,9 +51,13 @@ expeditions_d %>%
   mutate(peak_name = fct_rev(fct_infreq(peak_name))) %>%
   ggplot( aes(y = peak_name, fill = season)) +
     geom_bar() +
-    labs(x = "Number of expeditions", y = NULL, title = "The 15 most popular peaks stacked by season of expedition") +
+    labs(x = "Number of expeditions", 
+         y = NULL, 
+         title = 
+           "The 15 most popular peaks stacked by season of expedition") +
     theme_light() +
-    theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom") +
+    theme(plot.title = element_text(hjust = 0.5),
+          legend.position = "bottom") +
     scale_fill_viridis(discrete = TRUE)
 
 ```
@@ -81,7 +86,11 @@ phds_field %>%
   summarize(sphds = sum(n_phds, na.rm = TRUE)) %>%
   ggplot(aes(x = year, y = sphds, color = broad_field)) +
   geom_line(size = 1.2) +
-  labs(x = NULL, y = NULL, color = "Broad field", title = "Number of awarded Ph.D.-s in the US by year") +
+  labs(x = NULL, 
+       y = NULL, 
+       color = "Broad field", 
+       title = 
+         "Number of awarded Ph.D.-s in the US by year") +
   scale_x_continuous(breaks = scales::pretty_breaks()) + 
   scale_y_continuous(labels = comma_format()) +
   theme_minimal() +
@@ -110,24 +119,29 @@ commute_us <- comm_us$commute
 view(commute_us)
 
 commute_usa <- commute_us %>%
-  mutate(state = recode_factor(state, "Ca" = "California", "Massachusett" = "Massachusetts")) %>%
+  mutate(state = 
+           recode_factor(state, "Ca" = "California", "Massachusett" = "Massachusetts")) %>%
   group_by(state, mode, state_abb, state_region) %>%
-  summarize(commutes = sum(n, na.rm = TRUE))  %>%
+  dplyr::summarize(commutes = sum(n, na.rm = TRUE))  %>%
   spread(mode, commutes) %>%
   arrange(state_abb)
 view(commute_usa)
 
 # Plot 
-ggplot(commute_usa, aes(x = Walk, y = Bike, label = state_abb, color = state_region)) +
+ggplot(commute_usa, aes(x = Walk, y = Bike, 
+                        label = state_abb, 
+                        color = state_region)) +
   geom_point(size = 2) +
   scale_x_log10(labels = scales::comma_format()) +
   scale_y_log10(labels = scales::comma_format(), limits = c(100, 200000)) +
   # To display the exact labels we create a subset
-  geom_text(data= subset(commute_usa, state_abb %in% c("AK", "AZ", "CA", "CT", "DE", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MA", "ME", "MI", "MN", "MT", "ND", "NE", "NH", "NJ", "NY", "RI", "OH", "OR", "UT", "VT", "WA", "WY")), 
+  geom_text(data= 
+              subset(commute_usa, state_abb %in% c("AK", "AZ", "CA", "CT", "DE", "FL", "IA", "ID", "IL", "IN", "KS", "LA", "MA", "ME", "MI", "MN", "MT", "ND", "NE", "NH", "NJ", "NY", "RI", "OH", "OR", "UT", "VT", "WA", "WY")), 
             color = "black", size = 4) + 
   labs(x = "Number of ppl walking to work (log N)",
        y = "Number of ppl biking to work (log N)",
-       title = "Number of people walking vs. biking to work in each USA state", 
+       title = 
+         "Number of people walking vs. biking to work in each USA state", 
        color = "State region") +
   theme(aspect.ratio = 1,
        axis.title.x = element_text(size = 12.5),
