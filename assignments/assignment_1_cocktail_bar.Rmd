@@ -16,7 +16,11 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 library(tidyverse)
+library(dplyr)
+library(janitor)
+
 ```
 
 # Background
@@ -32,6 +36,9 @@ Note: There are several different ways to solve these tasks, feel free to come u
 Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there.
 
 ```{r}
+# Read the data
+
+cocktail <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
 
 ```
 
@@ -40,6 +47,29 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+#We first separate the ingredients in multiple rows
+cocktail_s <-  separate_rows(cocktail,ingredients, 
+                             sep = "<b4/>", convert = TRUE)
+cocktail_s2 <- separate_rows(cocktail_s, ingredients, 
+                             sep = "<br/>", convert = TRUE)
+cocktail <- separate_rows(cocktail_s2, ingredients, 
+                          sep = "<br>", convert = TRUE)
+# Verify all the ingredients are in individual rows
+print(cocktail$ingredients)
+```
+
+Remove all quantities
+```{r}
+#We remove all types of quantities and all alcohol content e.g 40% abv and 100-proof
+
+c_cocktail <-
+  cocktail %>%
+  mutate(ingredients =
+           gsub(".*oz|[0-9]|bsp|dashes|dash|drop|drops|-proof|\\(.*", "", ingredients)) %>%
+  mutate(ingredients = str_to_lower(ingredients))%>%
+  mutate(ingredients = str_trim(ingredients, side = "both"))
+  
+print(c_cocktail$ingredients)
 
 ```
 
@@ -48,6 +78,12 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
+# Select the ingredients row and eliminate duplicated values
+ingredients_l <-  distinct(c_cocktail[,8, drop = FALSE])
+# Order the row alphabetically
+ingredients_list <- ingredients_l[order(ingredients_l$ingredients),]
+# List is ready to be sent 
+view(ingredients_list)
 
 ```
 
@@ -56,7 +92,10 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
+# Count the number of unique occurances
+n_of_ingredients <- n_distinct(ingredients_l)
 
+print(n_of_ingredients)
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -64,6 +103,12 @@ How many different ingredients you will need?
 What are the 10 most frequently used ingredients? If there are ties, you can list more than 10.
 
 ```{r}
+# Top 10 ingredients without tie
+top_10_ingredients <- sort(table(c_cocktail$ingredients),decreasing=TRUE)[1:10]
+print(top_10_ingredients)
+# Top 10 ingredients with tie
+top_10_ingredients_tie <- sort(table(c_cocktail$ingredients),decreasing=TRUE)[1:11]
+print(top_10_ingredients_tie)
 
 ```
 
@@ -72,6 +117,17 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+# Group by cocktail and count all distinct ingredients, then sort them by frequency and then filter the cocktails with the most ingredients
+number_ingredients <- c_cocktail %>%
+  group_by(name) %>%
+  dplyr::summarize(count_ing = n_distinct(ingredients)) %>%
+  arrange(desc(count_ing)) %>%
+  filter(count_ing == max(count_ing))
+  
+view(number_ingredients)
+
+# Number of cocktails
+n_distinct(c_cocktail$name)
 
 ```
 
@@ -80,19 +136,37 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
+# Table with ingredients that appear only once
+rare_ingredients <- names(table(c_cocktail$ingredients))[table(c_cocktail$ingredients) == 1]
+
+view(rare_ingredients)
+# Number of ingredients that appear in only one cocktail
+length(rare_ingredients)
 
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
+# Table with cocktails that has rare ingredients
+rare_cocktail <- names(table(c_cocktail$name))[table(c_cocktail$ingredients) == 1]
+# Remove empty rows
+rare_cocktail <- remove_empty(as.data.frame(rare_cocktail))
+
+view(rare_cocktail)
 
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+# Table with cocktails that has no rare ingredients
+notrare_cocktails <- names(table(c_cocktail$name))[table(c_cocktail$ingredients) > 1]
+# Remove empty rows
+notrare_cocktails <- remove_empty(as.data.frame(notrare_cocktails))
+
+view(notrare_cocktails)
+
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -108,7 +182,39 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+cocktail_og <- readr::read_tsv("https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv")
+view(cocktail_og)
 
+
+# Create a list with all cocktail names
+matrix_rows <- list(unique(c_cocktail$name))[[1]]
+# Create a list with all ingredients
+matrix_columns <- list(unique(c_cocktail$ingredients))[[1]]
+# Count number of rows for creating matrix
+numrows <- length(matrix_rows)
+# Count number of columns for creating matrix
+numcolumns <- length(matrix_columns)
+# Variable that will contain the list
+matrix_values <- list()
+
+# Set the Matrix values
+i <- 1
+for (ingredient in matrix_columns) {
+  for (c in matrix_rows) {
+    c_ingredients = (cocktail_og %>% filter(name == c))['ingredients']
+    # Check if cocktail contains the ingredient
+    if(grepl(tolower(ingredient), tolower(c_ingredients))) {
+      matrix_values[[i]] <- 'X'
+    } else {
+      matrix_values[[i]] <- ''
+    }
+    i <- i + 1
+  }
+}
+# Create Matrix
+cocktail_matrix <- matrix(matrix_values, numrows, dimnames = list(c(matrix_rows) , c(matrix_columns)))
+
+view(cocktail_matrix)
 ```
 
 

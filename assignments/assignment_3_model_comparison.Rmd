@@ -59,6 +59,27 @@ In your discussion of the findings, briefly interpret the results of the above a
 Read the dataset used in this assignment. Pay attention to the extension of the datafile.
 
 ```{r}
+# Required packages
+library(readxl)
+library(tidyverse)
+library(skimr)
+library(psych)
+library(car)
+library(Hmisc)
+library(rstatix)
+library(olsrr)
+library(lmtest)
+library(lsr)
+
+# Import the data from xlsx file
+
+pain2 <- read_excel("C:\\Users\\Ma. de Lourdes\\OneDrive - Kormányzati Informatikai Fejlesztési Ügynökség\\UNIVERSIDAD\\PhD\\R Projects\\public_r_data_analysis_2021_spring\\data\\assignment_3_dataset.xlsx",  sheet = 1)
+
+pain_data <- as.data.frame(pain2)
+
+# Convert Pain variable into factor
+
+pain_data$sex <- as.factor(pain_data$sex)
 
 ```
 
@@ -69,6 +90,25 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
+# Explore the dataset. Check the type of variables, we skim it, check minimum, maximum and mean values of each variable 
+
+view(pain_data)
+str(pain_data)
+summary(pain_data)
+sum(is.na(pain_data))
+
+skim(pain_data)
+
+# Create a scatterplot to visualize the relationship between age and pain, adding sex as color.
+
+ggplot(data = pain_data) +
+  geom_point(mapping = aes(x = age, y = pain, color = sex))
+
+# We visualize relationship between one of the pain measurements and pain, adding sex as color. In both graphs is clear that pain has an observation of 50 which is more than the range accepted. Also the variable sex has three levels when it should be two
+
+ggplot(pain_data, aes(x = pain_cat, y = pain, color = sex)) +
+  geom_point()  +
+  geom_smooth(method = "lm")
 
 ```
 
@@ -77,6 +117,44 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
+# After exploring the dataset we identified several coding errors. 
+
+# Clean the data of what we interpreted as typing errors and in the case of the variable mindfulness since maximum range is 6, we are not sure whether it was meant to be 6 or another value, so we exclude it.
+
+pain_data_c <- pain_data %>%
+  mutate(sex = recode_factor(sex, "woman" = "female")) %>%
+  filter(mindfulness <= 6)
+
+# Correct the value in pain variable, as the 0 is most likely to be a error in entry.
+
+pain_data_c$pain[pain_data_c$pain == 50] <- 5
+
+# Explore the cleaned dataset to verify changes.
+
+view(pain_data_c)
+summary(pain_data_c)
+str(pain_data_c)
+
+# We plot again some of variables to see the differences after correcting coding errors
+
+# We reproduce the same plot as before, we verify that pain has not higher values than 10 
+
+ggplot(data = pain_data_c) +
+  geom_point(mapping = aes(x = age, y = pain, color = sex))
+
+# We visualize other variables to check their interactions and possible outliers
+ggplot(pain_data_c, aes(x = cortisol_serum, y = pain_cat, fill = sex)) +
+  geom_boxplot()  
+
+ggplot(pain_data_c, aes(x = cortisol_saliva, y = pain)) +
+  geom_point(color = "aquamarine4") +
+  facet_wrap(~ sex)
+
+# We plot mindfulness and pain, we verify that the there is no observation higher than 6
+ggplot(pain_data_c, aes(x = mindfulness, y = pain)) +
+  geom_point(color = "aquamarine4") +
+  facet_wrap(~ sex)
 
 ```
 
@@ -87,6 +165,14 @@ In order to test the more complex model for outliers and to test the assumptions
 
 ```{r}
 
+# Step 1 Block 1 : Nested model
+
+# We build the complex model in which we include the mentioned variables. 
+
+c_model <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_serum + cortisol_saliva + mindfulness, data = pain_data_c)
+nrow(model.frame(c_model))
+summary(c_model)
+
 ```
 
 #### Checking for influential outliers
@@ -94,6 +180,48 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+# Use Cook's distance to estimate the influence of the observations
+
+cooksd <- cooks.distance(c_model)
+
+# Plot the Cook's Distance using the traditional 4/n criterion
+sample_size <- nrow(pain_data_c)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4/sample_size, col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4/sample_size, names(cooksd),""), col="red")  # add labels
+
+# Define outliers based on 4/n criteria; 
+
+influential <- as.numeric(names(cooksd)[(cooksd > (4/sample_size))])
+
+# Visualize the rows that are considered outliers and will be later excluded
+
+view(pain_data_c[influential, ])
+
+# Define the dataset without outliers
+pain_data2 <- pain_data_c[-influential, ]
+head(pain_data2)
+
+nrow(pain_data2)
+
+# Convert the dataset in data frame for further analysis
+
+pain_no_out <- as.data.frame(pain_data2)
+
+view(pain_no_out)
+
+
+# Build the same complex model, but this time with the dataframe without outliers
+
+c_model_no <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_serum + cortisol_saliva + mindfulness, data = pain_no_out)
+nrow(model.frame(c_model_no))
+summary(c_model_no)
+
+# Plot to check for influential cases
+plot(c_model_no, 5)
+
+# Some observations stick out, but they dont' cross Cook's distance line, which is not present in the plot
 
 ```
 
@@ -102,19 +230,67 @@ Check for outlier values in the model.
 Check the normality assumption.
 
 ```{r}
+# Perform the Shapiro-Wilk test for violation of normality on the variable Pain. 
+
+shapiro.test(pain_no_out$pain)
+
+# We obtained W .94, p 8.91, indicating that no significant departures from normality were detected
+
+# Plot an histogram to check normality distribution of the pain variable. We visualize that data is relatively normally distributed
+
+hist(pain_no_out$pain,probability=T, main="Histogram of normal
+data",xlab="Approximately normally distributed data")
+lines(density(pain_no_out$pain),col=2)
+
+# Plot for detecting violation of normality assumption in the complex model with no outliers. We visualize that data is relatively normally distributed.
+
+plot(c_model_no, 2)
+
+# We can also use residual qq plot function from the olsrr package for detecting violation of normality assumption
+
+ols_plot_resid_qq(c_model_no)
+
+# Perform the Shapiro-Wilk test for violation of normality on the complex model with no outliers. 
+
+norm_t_c_model <- ols_test_normality(c_model_no)
+
+norm_t_c_model["shapiro"]
+
+# We obtained W .99, p 0.59, indicating that no significant departures from normality were detected
 
 ```
 
 Check the linearity assumption.
 
 ```{r}
+# Plot to check linearity. Residual vs fitted values
+ols_plot_resid_fit(c_model_no)
+
+plot(c_model_no, 1)
+
+# We can use crPlots() function to visualize if our predictors have a linear relationship with our dependent variable.
+crPlots(c_model_no)
+
+# Residual Fit Spread Plot
+ols_plot_resid_fit_spread(c_model_no)
+
+# Assumption is met
 
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+# We plot to see if there is a pattern in the residuals
+# We can use the Residual vs Fitted Values Plot function from olsrr package
+ols_plot_resid_fit(c_model_no)
 
+plot(c_model_no, 3)
+
+# Use Breusch Pagan test  that measures herteroskedasticity
+ols_test_breusch_pagan(c_model_no)
+
+# Test is not significant p. 0.14. Residuals do not exhibit heteroskedasticity. Homoscedasticty assumption is met
 ```
 
 Check the multicollinearity assumption.
@@ -126,6 +302,16 @@ https://statisticalhorizons.com/multicollinearity
 http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity-in-regression-analysis
 
 ```{r}
+# Collinearity Diagnostics
+ols_coll_diag(c_model_no)
+
+# Tolerance and Variance Inflation Factor
+ols_vif_tol(c_model_no)
+
+# Cortisol serum (6.96) and cortisol saliva (7.53) have high indexes of multicollinearity, this means that they are highly correlated predictors, its necessary to remove one for a better model fit. 
+
+# Base on some articles Cortisol saliva is a reliable measure of cortisol levels. 10.1378/chest.11-0448, 10.1177/000456328302000601, https://academic.oup.com/painmedicine/article/9/6/752/1909385#29385949
+# We keep cortisol saliva variable in the complex model
 
 ```
 
@@ -134,12 +320,54 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 If based on the assumption tests you decide to drop a predictor variable you should do that here. Create your updated model.
 
 ```{r}
+# Create the updated complex model without cortisol serum variable
 
+c_modelupdate <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_saliva + mindfulness, data = pain_data_c)
+nrow(model.frame(c_modelupdate))
+summary(c_modelupdate)
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+# We use Cook's distance to estimate the influence of the observations
+
+cooksd2 <- cooks.distance(c_modelupdate)
+
+# We plot the Cook's Distance using the traditional 4/n criterion
+
+sample_size2 <- nrow(pain_data_c)
+
+plot(cooksd2, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4/sample_size2, col="red")  # add cutoff line
+text(x=1:length(cooksd2)+1, y=cooksd2, labels=ifelse(cooksd2>4/sample_size, names(cooksd2),""), col="red")  # add labels
+
+# Defining outliers based on 4/n criteria; 
+
+influential2 <- as.numeric(names(cooksd2)[(cooksd2 > (4/sample_size2))])
+
+# We visualize the rows that are considered outliers and will be later excluded
+
+view(pain_data_c[influential2, ])
+
+# We define the dataset without outliers
+
+pain_data3 <- pain_data_c[-influential2, ]
+head(pain_data3)
+
+nrow(pain_data3)
+
+# We convert the dataset in data frame for further analysis
+
+pain_no_out2 <- as.data.frame(pain_data3)
+
+view(pain_no_out2)
+
+# We build the same complex model, but this time with the dataframe without outliers
+
+c_modelupdate_no <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_saliva + mindfulness, data = pain_no_out2)
+nrow(model.frame(c_modelupdate_no))
+summary(c_modelupdate_no)
 
 ```
 
@@ -148,44 +376,171 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+# Perform the Shapiro-Wilk test for violation of normality on the variable Pain in the updated model
+
+shapiro.test(pain_no_out2$pain)
+
+# We obtained W .94, p 7.11, indicating that no significant departures from normality were detected
+
+# Plot an histogram to check normality distribution of the pain variable. We visualize that data is relatively normally distributed
+
+hist(pain_no_out2$pain,probability=T, main="Histogram of normal
+data",xlab="Approximately normally distributed data")
+lines(density(pain_no_out2$pain),col=2)
+
+# Plot for detecting violation of normality assumption in the complex updated model. We visualize that data is relatively normally distributed.
+
+# We can also use residual qq plot function from the olsrr package for detecting violation of normality assumption
+
+ols_plot_resid_qq(c_modelupdate_no)
+
+plot(c_modelupdate_no, 2)
+
+# Perform the Shapiro-Wilk test for violation of normality on the updated complex model with no outliers. 
+
+norm_up_c_model <- ols_test_normality(c_modelupdate_no)
+
+norm_up_c_model["shapiro"]
+
+# We obtained W .99, p 0.73, indicating that no significant departures from normality were detected
 
 ```
 
 Linearity assumption
 
 ```{r}
+# Plot to check linearity. Residual vs fitted values
+
+ols_plot_resid_fit(c_modelupdate_no)
+
+plot(c_modelupdate_no, 1)
+
+# We can use crPlots() function to visualize if our predictors have a linear relationship with our dependent variable.
+
+crPlots(c_modelupdate_no)
+
+# Residual Fit Spread Plot
+ols_plot_resid_fit_spread(c_modelupdate_no)
+
+# Assumption is met
 
 ```
 
 Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
+# We plot to see if there is a pattern in the residuals
+# We can use the Residual vs Fitted Values Plot function from olsrr package
+
+ols_plot_resid_fit(c_modelupdate_no)
+
+plot(c_modelupdate_no, 3)
+
+# Use Breusch Pagan test  that measures herteroskedasticity
+
+ols_test_breusch_pagan(c_modelupdate_no)
+
+# Test is not significant p. 0.20. Residuals do not exhibit heteroskedasticity. Homoscedasticty assumption is met
 
 ```
 
 Multicollinearity assumption
 
 ```{r}
+# Collinearity Diagnostics
+ols_coll_diag(c_modelupdate_no)
 
+# Tolerance and Variance Inflation Factor
+ols_vif_tol(c_modelupdate_no)
+
+# All values of VIF are under 3 threshold
 ```
 
 ## Model comparison
 
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
-```{r}
+The hierarchical multiple regression revealed that at Stage one, in the simple model, Age contributed significantly to the regression model and with Sex accounted for 6.2% of the variation in Pain
+F(2, 146 = 5.92 p. 0.0034)
 
+
+```{r}
+# Required package
+library(sjPlot)
+
+# Simple model with Age and Sex as predictors for Pain
+s_model2 <- lm(pain ~ age + sex, data = pain_no_out2)
+nrow(model.frame(s_model2))
+summary(s_model2)
+
+# Table describing the coefficients of the predictors
+
+# Use tab model function from sjPlot package 
+
+tab_model(s_model2, show.std = TRUE, string.ci = "95% CI", 
+          dv.labels = "Simple Model")
+
+# Creates an APA compatible table with all necessary coefficients
 ```
+
+Interpretation: Based on the coefficients, we see that age and pain are negative correlated (b = -0,076; p = 0.0007), as Age increases, Pain decreases.
+
+##Complex model
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
 ```{r}
+# Complex model
+
+c_modelupdate_no <- lm(pain ~ age + sex + STAI_trait + pain_cat + cortisol_saliva + mindfulness, data = pain_no_out2)
+nrow(model.frame(c_modelupdate_no))
+summary(c_modelupdate_no)
+
+# Table describing the coefficients of the predictors for the complex model
+
+tab_model(c_modelupdate_no, show.std = TRUE, string.ci = "95% CI", 
+          dv.labels = "Complex Model")
+
+# Creates an APA compatible table with all necessary coefficients
 
 ```
+The complex model explained 42 % of variance. Sex, pain catastrophizing and cortisol saliva contributed significantly to the model, they are significant predictors of postoperative pain.
+F (6, 142 = 18.52 p.< 7.86)
 
-Compare the two models.
+The model's equation:
+pain = 0.0013 - 0.010 * age + 0.376 * sex - 0.010 * STAI_trait + 0.105 * pain_cat + 0.582 * cortisol_saliva - 0.121 * mindfulness
+
+
+##Compare the two models.
 
 ```{r}
+#  Nested model comparison
+
+anova(s_model2, c_modelupdate_no)
+
+# When comparing the two models the following results are obtained. F (2, 142 = 23.034, p. <.0001). The complex model is significantly different compared to the simple one
+
+# We can also calculate the change in R squared when comparing the two models
+
+summary(c_modelupdate_no)$adj.r.squared - summary(s_model2)$adj.r.squared
+
+# Increment of variance explained in 0.35 for the complex model. This can be interpreted that the complex model is better at explaining the variance compared to the simple one.
+
+# Likelihood ratio test
+
+lrtest(s_model2, c_modelupdate_no)
+
+# Results: Chi squared 74.511 p < 2.528e15
+
+# AICs of the models
+
+AIC(s_model2, c_modelupdate_no)
+
+# AIC of simple model: 519.82
+# AIC of complex model: 453.30
 
 ```
 
+Based on AIC values, the complex model is the better model.
+
+In conclusion, the complex model incremented in 35% its explanation of the variance compared to the simple model. The predictors Sex, pain catastrophizing and cortisol saliva contributed significantly to the model to predict postoperative pain.
