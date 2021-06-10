@@ -1,7 +1,9 @@
 ---
 title: 'Assignment 2: Data visualization'
-author: "Tamas Nagy"
-output: html_document
+author: "Aleksandar Vujic"
+output: 
+  html_document: 
+    theme: journal
 editor_options: 
   chunk_output_type: console
 ---
@@ -20,6 +22,13 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(viridis)
+library(scales)
+library(RColorBrewer)
+library(haven)
+
+
+theme_set(theme_light())
 ```
 
 ## Task 1: Climbing expeditions
@@ -29,10 +38,28 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   Use `forcats::fct_lump()` to get the 15 most frequent peaks, and drop the "Other" category.
 -   The bars are ordered by the sum of all expeditions (use `fct_reorder()`).
 -   The bar colors use the viridis palette and light theme.
+```{r First plot, results='hide', echo = TRUE}
+expeditions <- readr::read_csv("https://raw.githubusercontent.com/tacookson/data/master/himalayan-expeditions/expeditions.csv")
 
-```{r}
+glimpse(expeditions)
+
+expeditions$peak_name <- fct_lump_n(expeditions$peak_name, n = 15)
+
+expeditions <- expeditions %>% 
+  filter(peak_name != "Other")
+
+expeditions %>% 
+    mutate(peak_name = peak_name %>% fct_infreq() %>% fct_rev()) %>% 
+    ggplot(aes(y = peak_name, fill = season)) +
+    geom_bar() +
+      labs(title = "The 15 most popular peaks stacked by season of expedition", 
+              x = "Number of expeditions") +
+    theme(legend.position = "bottom",
+        axis.title.y = element_blank()) +
+    scale_fill_viridis(discrete = TRUE) 
 
 ```
+
 
 ## Task 2: PhDs awarded
 
@@ -44,8 +71,29 @@ Notes:
 -   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
-```{r}
+```{r Second plot, results='hide', echo=TRUE}
 
+phd <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+
+glimpse(phd)
+
+phd <- phd %>% 
+  group_by(broad_field, year) %>% 
+  mutate(sum_by_field = sum(n_phds, na.rm = TRUE))
+  
+
+ggplot(phd, aes(x = year, y = sum_by_field, color = broad_field)) +
+  geom_line(size = 1.2) +
+  theme_minimal() + 
+  scale_x_continuous(breaks = pretty_breaks()) + 
+  scale_y_continuous(label = comma) +
+  labs(title = "Number of awarded Ph.D-s in the US by year",
+       color = "Broad field") +
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        aspect.ratio = 0.9) +
+  scale_color_brewer(palette = "Dark2")
+  
 ```
 
 ## Task 3: Commute in the US
@@ -58,6 +106,68 @@ Notes:
 -   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
 -   The point size is 2, . The theme is set to light.
 
-```{r}
+```{r Third plot, results='hide', echo = TRUE}
 
+
+commute <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv")
+
+glimpse(commute)
+
+
+commute <- commute %>% 
+  mutate(id = row_number()) %>% 
+  select(id, everything())
+
+commute %>% 
+  distinct(state) %>% 
+  print(n = Inf) #Massachussett and Ca
+
+#correct 
+commute <- commute %>% 
+  mutate(state = recode_factor(state, "Ca" = "California", "Massachusett" = "Massachusetts"))
+
+#distinc state_abbr
+commute %>% 
+  distinct(state_abb) #there are missing values
+
+commute %>% 
+  filter(is.na(state_abb))
+
+#correct missing state abbreviations
+commute[commute$id == 380, "state_abb"] <-  "CA"
+commute[commute$id == 1405, "state_abb"] <-  "MT"
+commute[commute$id == 1746, "state_abb"] <-  "DC"
+commute[commute$id == 3494, "state_abb"] <-  "DC"
+
+# prepare data
+commute_new <- commute %>% 
+  group_by(state, mode, state_abb, state_region) %>% 
+  summarize(no_comm = sum(n, na.rm = TRUE)) %>% 
+  pivot_wider(names_from = mode, values_from = no_comm) %>% 
+  arrange(state_abb)
+
+
+label_data <- commute_new %>% 
+  filter(state_abb %in% c("AK", "AZ", "CA", "CT", "DE", "FL", 
+                                                          "IA", "ID", "IL", "IN", "KS", "LA",
+                                                          "MA", "ME", "MI", "MN", "MT", "ND", 
+                                                          "NE", "NH", "NJ", "NY", "RI", "OH", 
+                                                         "OR", "UT", "VT", "WA", "WY"))
+
+ggplot(commute_new, aes(Walk, Bike, color = state_region, label = state_abb)) +
+    geom_point(size = 2) + 
+    scale_x_log10(labels = comma_format()) + 
+    scale_y_log10(labels = comma_format(), limits = c(100, 200000)) +
+  geom_text(data = label_data, color = "black") +
+    theme(aspect.ratio = 1,
+       axis.title.x = element_text(size = 12),
+       axis.title.y = element_text(size = 12),
+        plot.title = element_text(size = 14, hjust = 0.5)) +
+    labs(title = "Number of people walking vs. biking to work in each US state", 
+       x = "Number of ppl walking to work (Log N)",
+       y = "Number of people biking to work (Log N)",
+       color = "State region")
 ```
+
+
+

@@ -1,14 +1,83 @@
 ---
-title: "Assignment 6: "
-author: "Marton Kovacs"
-output: html_document
-editor_options: 
+title: 'Assignment 5: Factor Analysis'
+author: "Aleksandar Vujic"
+output:
+  html_document: 
+    theme: paper
+    df_print: default
+  pdf_document: default
+  word_document: default
+editor_options:
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(readr)
 library(tidyverse)
+library(knitr)
+library(tidyverse)
+library(psych)
+library(car)
+library(ggcorrplot)
+library(mvnormtest) #mardia
+library(MVN) #mvn
+library(broom)
+library(kableExtra)
+library(grid)
+library(gridExtra)
+
+
+theme_set(theme_classic())
+options(digits = 2)
+
+
+# Function for printing the Factor solution; adapted from:
+#https://stackoverflow.com/questions/63856304/create-data-frame-from-efa-output-in-r
+# I added the item content
+
+fa_table <- function(x, y, cut = .30) {
+  #get sorted loadings
+  loadings <- fa.sort(x)$loadings %>% round(2)
+  #suppress loadings
+  loadings[abs(loadings) < cut] <- ""
+  # Item content
+  item_df <- data.frame(
+  "item" = y[,1],
+  "item_content" = y[,2])
+  #get additional info
+  add_info <- cbind(
+    x$communality, 
+    x$uniquenesses) %>% 
+  # make it a data frame
+  as.data.frame() %>%
+  # column names
+  rename("Communality" = V1,
+         "Uniqueness" = V2) %>%
+  #get the item names from the vector
+  rownames_to_column("item") %>% 
+  left_join(item_df) 
+  #build table
+  loadings %>%
+    unclass() %>%
+    as.data.frame() %>%
+    rownames_to_column("item") %>%
+    left_join(add_info) %>%
+    mutate(across(where(is.numeric), round, 3)) %>% 
+    select(item, item_content, everything()) %>% 
+      kbl(caption = "Factor laodings, unique and common variances") %>% 
+      kable_styling(full_width = FALSE, position = "left")
+}
+
+```
+
+```{css, echo = FALSE}
+caption {
+      color: gray;
+      font-weight: bold;
+      font-size: 1.5em;
+      font-family: Arial Narrow;
+    }
 ```
 
 # Introduction
@@ -102,15 +171,80 @@ Talk about the limitations of your study and findings.
 
 Read the Animal Rights Scale (ARQ) dataset from the 'data/' folder. Pay attention to the extension.
 
-```{r}
-
+```{r Data loading, warning=FALSE, message=FALSE}
+amq  <- read_csv("./data/assignment_5_dataset.csv")
 ```
 
 ## EDA
 
-```{r}
+```{r Explorative Data Anylsis}
+glimpse(amq)
+
+# add ID column
+amq <- amq %>% 
+  mutate(id = row_number()) %>% 
+        select(id, everything())   
+
+#categorical
+amq_categ <- amq %>% 
+  select(sex, party, liberal)
+
+#extract items only
+amq_items <- amq %>% 
+  select(ar1:ar28)
+
+# Check missing values
+amq_categ %>% 
+  is.na() %>% 
+  sum() # 3 missing
+
+amq_items %>% 
+  is.na() %>% 
+  sum() # 8 missing
+
+#Replace missing values with median
+amq_items_no_missing <- amq_items %>% 
+mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
+
+# Replace a missing value in liberal
+amq <- amq %>% 
+mutate(liberal = ifelse(is.na(liberal), median(liberal, na.rm = TRUE), liberal))
+
+
+# Descriptive statics
+amq_descr <- describe(amq_items_no_missing) # na.rm = TRUE
+  
+amq_descr %>%   
+  kbl(caption = "Descriptive Statistics") %>%
+  kable_styling(full_width = F, position = "left", html_font = "Arial Narrow")
+
+# Make bar graphs
+bar_graph <- geom_bar(fill = "steelblue", width = 0.5)
+aspect = theme(aspect.ratio = 0.2)
+
+bar1 <- ggplot(amq, aes(as.factor(sex))) + 
+  bar_graph + labs(title = "Gender", x = "", y = "Count") + 
+  aspect +
+  scale_x_discrete(labels = c("1" = "Male", "2" = "Female"))
+
+bar2 <- ggplot(amq, aes(as.factor(party))) +
+  bar_graph + labs(title = "Party memberhisp",  x = "", y = "Count") + 
+  aspect +
+  scale_x_discrete(labels = c("1" = "democrat", "2" = "republican",
+                              "3" = "other", "4" = "none"))
+
+bar3 <- ggplot(amq, aes(as.factor(liberal))) + 
+  bar_graph + labs(title = "How liberal is the person?", x = "", y = "Count") + 
+  aspect +
+  scale_x_discrete(labels = c("1" = "1 conservative", "5" = "5 very liberal"))
+
+gridExtra::grid.arrange(bar1, bar2, bar3, top = textGrob("Frequencies", 
+                                                         gp = gpar(fontsize = 20, font = 1)))
+
+
 
 ```
+
 
 ## Data manipulation
 
@@ -118,109 +252,491 @@ Recode the sex and party variables as factor type variables with the following l
   * sex: 1 - male, 2 - female
   * party: 1 - democrat, 2 - republican, 3 - other, 4 - none
 
-```{r}
+```{r Correct the coding}
 
+amq <- amq %>% 
+  mutate(sex = fct_recode(as.factor(sex), "male" = "1", "female" = "2"),
+         party = fct_recode(as.factor(party), "democrat" = "1",
+                                              "republican" = "2",
+                                              "Other" = "3",
+                                              "none" = "4"))
 ```
 
 # Creating a correlation matrix
 
 __Note:__ Remember to only include the variables of the questionnaire that will be part of the factor analysis.
 
-```{r}
+Create the correlation matrix.
+```{r, results='hide'}
+amq_cor <- round(cor(amq_items_no_missing, use = "complete.obs"), 2)
+
+upper.tri(amq_cor)
+
+upper <- amq_cor
+upper[upper.tri(amq_cor)]<-""
+upper <- as.data.frame(upper)
 
 ```
 
-Create the correlation matrix.
 
-```{r}
-
+```{r Correlation matirx}
+upper %>% kbl() %>% 
+    kable_styling(full_width = FALSE, html_font = "Arial Narrow")
 ```
 
 ## Visualizing the correlation matrix
 
 Create a visualization of the results of the correlation matrix.
 
-```{r}
-
+```{r Visualized correlation matrix, results='hide'}
+#ggcorplot
+amq_cor %>% 
+  ggcorrplot(type = "lower")
 ```
 
 ## Test for factorability
 
 Calculate the KMO score.
 
-```{r}
-
+```{r KMO and Bartlett Chi Square test}
+amq_kmo <- KMO(amq_items) #KMO = .88
+amq_kmo$MSA
+bartlett.test(amq_items) # Bartlett's test = 142.37, p < .001
 ```
 
+We could characterize the KMO value as 'great'. The pattern of item correlations is "relatively compact" (Field, 2012). The significance of Bartlett's test indicates that the the correlations between the items are "large enough". We therefore can assume that the data are appropriate for factorization.
+ 
 ## Test for multivariate normality
 
-```{r}
-
+```{r Multivariate normality test}
+mvn(amq_items)$multivariateNormality
 ```
+
+The result of Mardia's test indicates violation of the multivariate normality assumption.
+
 
 Test for skewness and kurtosis.
 
-```{r}
-
+```{r Skewness and kurtosis, warning=FALSE, message=FALSE}
+mardia(amq_items)
 ```
+
+Multivariate skewness and kurtosis are significant, so the assumption does not hold.
+
+
+```{r Outliers and influential cases, warning=FALSE, message=FALSE}
+
+# Univariate outliers
+amq_items_no_missing %>% 
+  mutate(total = rowMeans(amq_items_no_missing),
+         z_total = abs(scale(total)),
+         ID = seq(1:154)) %>% 
+  filter(z_total > 3) %>% 
+  select(ID, z_total)
+
+# case 106 is an univariate outlier
+
+# Multivariate outliers
+amq_items_no_missing %>% 
+  mutate(mahal = mahalanobis(amq_items_no_missing,
+                             colMeans(amq_items_no_missing),
+                             cov(amq_items_no_missing)),
+         mahal_p = pchisq(mahal, df = 28, lower.tail = FALSE),
+         ID = seq(1:154)) %>% 
+  select(ID, mahal, mahal_p) %>% 
+  filter(mahal_p < 0.001) %>% 
+  arrange(desc(mahal))
+
+# Multivariate outliers are 35, 106, 116, 132
+# 56.892
+```
+
+We see that there are 4 cases (including case 106 which is univariate outlier as well) with particularly high Mahalanobis distance, which indicates that they are multivariate outliers.
 
 ## Create scree plot
 
 Create a scree plot to help the decision on how many factors to include.
 
 ```{r}
-
+scree(amq_items_no_missing) 
 ```
+
+According to the scree plot, we could say that the number of factors should be 2 or eventually 5.
 
 ## Run the factor analysis
 
 Run the factor analysis with the chosen number of factors.
 
-```{r}
+```{r, Parallel Analysis}
+
+# Parallel analysis
+set.seed(1234)
+parallel_result <- fa.parallel(amq_items_no_missing, fm = "pa")
 
 ```
+
+Parallel analysis suggests 3 factors or 2 components.
+
+```{r Preliminary efa}
+efa_preliminar_result <- fa(amq_items_no_missing, 
+                            nfactors = length(amq_items_no_missing),
+                            rotate = "none")
+
+# How many factors have eigenvalues > 1?
+efa_preliminar_result$Vaccount %>%
+  data.frame() %>% 
+  rownames_to_column(var = "property") %>% 
+  gather(key = "factor", value = "value", -property) %>% 
+  filter(property == "SS loadings", value >= 1)
+
+```
+
+Initial analysis shows that first 4 factors have eigenvalue > 1.
+
+We will try to compare 2- and 3-factor solutions.
+
+```{r, Run EFA 2 and 3 factors, message = FALSE}
+# Two-factor solution
+fa_result_2_fact <- fa(amq_items_no_missing, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin")
+
+# Three-factor solution
+fa_result_3_fact <- fa(amq_items_no_missing, 
+                    nfactors = 3, 
+                    fm = "pa", 
+                    rotate="oblimin")
+
+print(fa_result_2_fact, sort = TRUE, cut = .30)
+print(fa_result_3_fact, sort = TRUE, cut = .30)
+```
+
+The 3-factor solution does not appear as meaningful as two-factor solution. The We will continue refining the 2-factor solution. The first explains 38% of the variance, while the late explains 34%. In other words, we do not loose much explained variance by keeping only two factors. 
 
 Sort the communality scores in decreasing order.
-
 ```{r}
 
+comm <- tibble(communality = fa_result_2_fact$communality)
+comm %>% 
+  mutate(item = names(amq_items_no_missing)) %>% 
+  select(item, communality) %>% 
+  arrange(desc(communality)) %>% 
+  kbl(caption = "Item Communalities") %>% 
+    kable_styling(full_width = FALSE, position = "left", html_font = "Arial Narrow")
+
 ```
+
+Large proportion of items have a low communality. We will eventually remove some of them.
 
 Calculate the mean communality scores.
 
 ```{r}
+comm %>% 
+  summarise(mean_communality = mean(communality)) 
+```
+
+The average communality is .341. 
+
+
+```{r, EFA Updated}
+
+# Remove item ar8, loading < .30
+amq_items_updated_1 <- amq_items_no_missing %>% 
+  select(-c(ar8)) 
+
+fa_result_updated_1 <- fa(amq_items_updated_1, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+print(fa_result_updated_1, sort = TRUE, cut = .30)
+
+# Remove ar15 (cross-loading)
+amq_items_updated_2 <- amq_items_updated_1 %>% 
+  select(-c(ar15)) 
+
+fa_result_updated_2 <- fa(amq_items_updated_2, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+print(fa_result_updated_2, sort = TRUE, cut = .30)
+
+# Remove ar12 (cross-loading)
+amq_items_updated_3 <- amq_items_updated_2 %>% 
+  select(-c(ar12)) 
+
+fa_result_updated_3 <- fa(amq_items_updated_3, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+print(fa_result_updated_3, sort = TRUE, cut = .30)
+
+# Print communalities again
+sort(fa_result_updated_3$communality)
+
+# Remove items 16, 3 and 28 - lowest communalities
+amq_items_updated_4 <- amq_items_updated_3 %>% 
+  select(-c(ar3, ar16, ar28))
+
+
+fa_result_updated_4 <- fa(amq_items_updated_4, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+print(fa_result_updated_4, sort = TRUE, cut = .30)
+
+# Remove ar14 loading < .30
+amq_items_updated_5 <- amq_items_updated_4 %>% 
+  select(-c(ar14))
+
+
+fa_result_updated_5 <- fa(amq_items_updated_5, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+print(fa_result_updated_5, sort = TRUE, cut = .30)
 
 ```
+Although we still have items with low communalities, we will not remove anymore items from the analysis.
+
+
+Compare the last model with the model with deleted mahalanobis distance outliers.
+```{r Compare models with and without outliers}
+
+# Create a dataset with no mahalanobis distance outliers
+amq_item_updated_no_out <- amq_items_updated_5 %>% 
+  slice(-c(34, 35, 106, 116, 132))
+
+fa_result_updated_no_out <- fa(amq_item_updated_no_out, 
+                  nfactors = 2, 
+                  fm = "pa", 
+                  rotate="oblimin") 
+
+
+print(fa_result_updated_no_out, sort = TRUE, cut = .30)
+
+```
+
+**Note.** There is no substantial difference between the results when outliers are included and when they are not. The exception is item 25 ( Most cosmetics research done on animals is unnecessary and invalid), which loaded on the first factor instead of the second. We decide not to exclude observations and to continue with analysis.
+
+The correlation between two factors is _r_ = .60.
+
+
 
 Show the factor loadings for the chosen factor structure.
 
-```{r}
+```{r Item content, include=FALSE}
+# Add item content to the table
+items <- tibble(
+  
+  "item" = paste0("ar",1:28),
+  
+  "item_content" = c(
+    
+    "Humans have no right to displace wild animals by converting wilderness areas into farmlands, cities, and   other things designed for people.",
+    "Animal research cannot be justified and should be stopped.",
+    "It is morally wrong to drink milk and eat eggs.",
+    "A human has no right to use a horse as a means of transportation (riding) or entertainment (racing).",
+    "It is wrong to wear leather jackets and pants.",
+    "Most medical research done on animals is unnecessary and invalid.",
+    "I have seriously considered becoming a vegetarian in an effort to save animal lives.",
+    "Pet owners are responsible for preventing their pets from killing other animals, such as cats killing mice or snakes eating live mice.",
+    "We need more regulations governing the use of animals in research.",
+    "It is morally wrong to eat beef and other “red” meat.",
+    "Insect pests (mosquitoes, cockroaches, flies, etc.) should be safely removed from the house rather than killed.",
+    "Animals should be granted the same rights as humans.",
+    "It is wrong to wear leather belts and shoes.",
+    "I would rather see humans die or suffer from disease than to see animals used in research.",
+    "Having extended basic rights to minorities and women, it is now time to extend them also to animals.",
+    "God put animals on Earth for man to use.",
+    "There are plenty of viable alternatives to the use of animals in biomedical and behavioral research.",
+    "Research on animals has little or no bearing on problems confronting people.",
+    "New surgical procedures and experimental drugs should be tested on animals before they are used on people.",
+    "I am very concerned about pain and suffering in animals.",
+    "Since many important questions cannot be answered by doing experiments on people, we are left with no alternatives but to do animal research.",
+    "It is a violation of an animal’s rights to be held captive as a pet by a human.",
+    "It is wrong to wear animal fur (such as mink coats).",
+    "It is appropriate for humans to kill animals that destroy human property, for example, rats, mice, and pigeons.",
+    "Most cosmetics research done on animals is unnecessary and invalid.",
+    "It is morally wrong to eat chicken and fish.",
+    "Most psychological research done on animals is unnecessary and invalid.",
+    "Hunters play an important role in regulating the size of deer populations.")
+  
+)
 
 ```
+
+
+```{r Explained variance, warning=FALSE, message=FALSE}
+# First, we will see the explained variance and eigenvalues
+fa_result_updated_5$Vaccounted %>%
+  as.data.frame() %>%
+  rownames_to_column("Property") %>%
+    mutate(across(where(is.numeric), round, 3)) %>%
+    kable(caption = "Eigenvalues and Explained Variance") %>% 
+    kable_styling(full_width = FALSE, position = "left", html_font = "Arial Narrow")
+```
+
+Roughly speaking, the two factors explain equal amount of the variance. And overall, we have 38% explained by both factors. This is not a huge proportion of explained variance.
+
+```{r Factor loadings, warning=FALSE, message=FALSE}
+# Pattern matrix
+fa_table(fa_result_updated_5, cut = .30, y = items)
+
+```
+
+We named the 2 factors **Moral Attitude** and **Research Disapproval**.
 
 Visualize the factor structure.
 
-```{r}
+```{r Factor structure diagram, warning=FALSE, message=FALSE}
+
+load <- fa_result_updated_5$loadings[,1:2] %>% 
+  data.frame() %>% 
+  mutate(factor_membership = ifelse(abs(PA1) > .30, "Moral Attitude", "Research Disapproval")) %>% 
+  rownames_to_column(var = "item") %>% 
+  mutate(item = parse_number(item))
+  
+ggplot(load, aes(PA1, PA2, color = factor_membership)) +
+  geom_text(label = load$item, show.legend = FALSE) +
+  geom_point(alpha = 0.1) +
+  labs(title  = "Factor loadings diagram", color = "Factor", x = "Moral Attitude", y = "Research Disapproval") +
+  guides(color = guide_legend(override.aes = list(alpha = 1)))
+
 
 ```
+
 
 ## Run linear regression
 
 Calculate the factor scores.
 
-```{r}
-
+```{r Make the factor scores, warning=FALSE, message=FALSE}
+factor_scores <- as_tibble(fa_result_updated_5$scores) %>% 
+  rename(score_1 = PA1,
+         score_2 = PA2)
 ```
 
 Bind factor scores to the original dataset.
 
-```{r}
+```{r Add scores to the original dataset}
+amq <- cbind(amq, factor_scores)
+
+amq %>% 
+  select(score_1, score_2, liberal) %>% 
+  mutate(liberal = as.numeric(liberal)) %>% 
+  cor(use = "complete.obs")
 
 ```
 
-Run the logistic regression.
+Run the regression.
 
-```{r}
+```{r Run Regression Model, warning=FALSE, message=FALSE}
+
+
+# Regression model
+reg_model <- lm(liberal ~ score_1 + score_2, data = amq)
+
+# Model summary
+glance(reg_model) %>% 
+  kbl(caption = "Regression Summary") %>% 
+  kable_styling(full_width = TRUE, html_font = "Arial Narrow")
+
+# Coefficients
+tidy(reg_model, conf.int = TRUE) %>% 
+  mutate(term = dplyr::recode(term, "score_1" = "Moral Attitude", 
+                              "score_2" = "Research Disapproval")) %>% 
+  kbl(caption = "Regression Coefficients") %>% 
+  kable_styling(full_width = TRUE, html_font = "Arial Narrow")
+```
+
+The regression model is significantly better than a null-model (predicting the outcome from it's mean score). Moral Attitude is significant in predicting the liberality.
+
+Visualize
+
+```{r Augment model, results=FALSE}
+model_aug <- augment(reg_model)
+```
+
+```{r Visulaize Regression Model, warning=FALSE, message=FALSE}
+
+ggplot(model_aug, aes(.std.resid)) + 
+  geom_histogram(fill = "steelblue", color = "white", bins = 10) + 
+  labs(title = "Standardized Residuals distribution", x = "Std. Residual")
 
 ```
+
+
+```{r Visualize the model, warning=FALSE, message=FALSE}
+
+# Plotting the model
+plot_1 <- ggplot(amq, aes(x = score_1, y = liberal)) + 
+  geom_jitter() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Liberality vs Moral Attitude",
+       x = "Moral Attitude", y = "Liberality")
+
+plot_2 <- ggplot(amq, aes(x = score_2, y = liberal)) + 
+  geom_jitter() + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Liberality vs Research Disapproval",
+       x = "Research Disapproval", y = "Liberality")
+
+plot_3 <- ggplot(model_aug, aes(x = .fitted, y = liberal)) + 
+  geom_jitter() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Liberality vs Fitted values",
+       x = "Fitted values", y = "Liberality")
+
+plot_4 <- ggplot(model_aug, aes(y = .std.resid, x = .fitted)) + 
+  geom_jitter() +
+  labs(title = "Residual plot",
+       x = "Fitted values", y = "Standaridzed Residuals")
+
+
+gridExtra::grid.arrange(plot_1, plot_2, plot_3, plot_4, nrow = 2, ncol = 2)
+```
+
+The residual plot is rather strange. That is because the outcome is discrete, it has just few possible values. For the improvement, an ordinal regression model would be needed here. 
+
+# **Discussion**
+
+The aim of this research was to find dimensions underlying the attitudes towards animals rights and use of animals for different purposes. This construct was assessed using Animal Rights Scale (ARS), a 28-item instrument, with 5-point Likert type response format.
+
+We conducted Exploratory factor analysis (EFA), with principal axis factoring method, and oblimin rotation (suggested by Field, 2012), which is an oblique rotation (i.e. it allows factors to correlate). The oblique rotation appeared to be appropriate, since the two factors correlated considerably. The missing values were imputed with median value, but more sophisticated techniques could been used.
+
+The data were not multivariate normal, and therefore principal axis factoring method was used, instead of maximum likelihood. The number of factors was determined using scree plot and parallel analysis. 
+
+The data appeared appropriate for factor analysis, since the KMO had desirable value, and Bartlett's Chi Square was significant. 
+
+The two extracted factors are Moral Attitude and Research Disapproval. *Moral Attitude* represents a positive attitude towards animal rights. Its content mostly captures disapproval of human consumption of animals and animal products, for food and clothing, but also for entertainment and other purposes. *Research Disapproval* dimension taps disapproval of conducting research and experiments on animals, and denying the usefulness of such research for humans. 
+
+The data failed the multivariate normality testing. Although there were no multivariate outliers  according to Cook's distance, there were however, several Mahalanobis distance outliers. However, we decided not to remove particular cases, since the solutions with and without them were not very different.
+
+### Regression
+
+Results from the regression analysis show that Moral Attitude positively predicts the level of person's liberality. However, Research Disapproval did not appeared as significant predictor. It should be noted that the model explained rather small amount of the liberality variance.
+
+
+Most of those items with low commonality belong to the Moral Attitude factor. Therefore, future research need to shed more light on this problem, and the results of the regression in this study should be taken with caution. 
+
+## Limitations
+
+This research has several limitations: 
+  
+  - First, the average communality of items was rather low, and even in the final solution, some items had communality lower      than expected. Those items do not have a lot in common with the rest of the items. Despite     that, internal consistency     of the whole questionnaire is good.
+
+- Second, the data were not multivariate normal.
+
+- Third, perhaps the next study should be conducted on a larger sample, since in this research there were only 160 cases on     28 variables, which is around 5 cases per variable, while some authors suggest as many as 20 observations per variable.
+
+- Fourth, although it is a common practice to treat 5-point Likert scales as continuous, it would perhaps be more               appropriate to factorize the polychoric correlations of the items (treat them as ordinal).
+- Finally, in order to further validate the scale, a confirmatory factor analysis is needed.
+- As for the regression analysis, perhaps it would be better to conduct a multinomial logistic regression, treating variable     'Liberal' as ordinal, rather than a continuous one. 
+
 
