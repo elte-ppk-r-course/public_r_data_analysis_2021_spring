@@ -12,6 +12,7 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Spotify data analysis
 
 # Introduction
 
@@ -25,6 +26,7 @@ library(tidyverse)
 library(DT)
 library(psych)
 library(car)
+library(broom)
 
 spotify <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
 ```
@@ -74,19 +76,19 @@ I found there are duplicates in `track_id` because a track can be contained in m
 
 # Removing unused variables
 ```{r}
-spotify_conscise <- spotify_unique %>% 
-  select(track_name, track_artist, track_popularity, playlist_genre, danceability,
+spotify_concise <- spotify_unique %>% 
+  select(track_name, track_artist, track_popularity, playlist_genre, mode, danceability,
          energy, loudness, speechiness, acousticness, instrumentalness,
          liveness, valence, tempo, duration_ms) %>% 
   mutate(duration_min = duration_ms / 60000) %>% 
   select(-duration_ms)
 ```
-I removed several variables that won't be used in the analysis to make it conscise. I also convert duration into minutes to make it easy to understand by lay people
+I removed several variables that won't be used in the analysis to make it concise. I also convert duration into minutes to make it easy to understand by lay people
 
 ### Histogram of Song's Feature
 ```{r}
-feature_names <- names(spotify_conscise)[c(3, 5:14)]
-songs_char <- spotify_conscise %>% 
+feature_names <- names(spotify_concise)[c(3, 6:15)]
+songs_char <- spotify_concise %>% 
             select(c(feature_names)) %>%
             pivot_longer(cols = feature_names)
 
@@ -101,7 +103,7 @@ songs_char %>%
 
 ### Final datast
 ```{r}
-spotify_final <- spotify_conscise %>% 
+spotify_final <- spotify_concise %>% 
   filter(track_popularity != 0)
 ```
 
@@ -160,7 +162,7 @@ The visualization above shows that songs from different genres actually follow d
 
 ## Characteristic of popular songs
 ```{r}
-feature_names_2 <- names(spotify_final)[c(5:14)]
+feature_names_2 <- names(spotify_final)[c(6:15)]
 
 songs <- spotify_final %>% 
   arrange(desc(track_popularity)) %>%
@@ -202,13 +204,30 @@ Summary of correlation matrix:
 
 # Regression Analysis on Track Popularity
 
-Multiple Linear Regression aims to predict the value of the dependent variable track_popularity based on song characteristics (`danceability`, `energy`, `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`, `valence`, `tempo`, `duration_min`).
+Model 1 of regression analysis aims to predict the value of `track_popularity` based on variables that could be measured objectively (`loudness`, `tempo`, and `duration_min`). Model 2 of multiple Linear Regression aims to predict the value of the dependent variable `track_popularity` based on all of song characteristics, including perceptual variables (`danceability`, `energy`, `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`, `valence`, `tempo`, `duration_min`). Notice that the predictors used in the model 1 are a subset of the predictors used in model 2.
 
 ```{r}
 model <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
             data = spotify_final)
+```
+
+## Checking for influential outliers
+
+Check for outlier values in the model.
+```{r}
+cooksd <- cooks.distance(model)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")
+abline(h = 3*mean(cooksd, na.rm=T), col="red")
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+
+spotify_final <- spotify_final[-14447, ]
+
+model <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
+            data = spotify_final)
 summary(model)
 ```
+I removed one data (no.1447) because it has hight Cooks distance
 
 ## Assumption checking
 ### Linearity of the data
@@ -235,10 +254,43 @@ vif(model)
 ```
 All variables have VIF below 5, then there is no problem with multicolinearity
 
+
+## Model comparison
+### Model 1
+```{r}
+model1 <- lm(track_popularity ~ loudness + tempo + duration_min,
+            data = spotify_final)
+summary(model1)
+```
+The model simultaneously can predict track popularity, with F(3, 25730) = 114.7, p < 0.001. All predictors could explain 1.3% variance of track popularity (R-squared=0.013). However, tempo is not significantly predict track popularity. The equation for the model is: 
+track popularity =  52.88 + 0.27 * loudness + 0.003 * tempo - 2.17 * duration
+
+### Model 2
+```{r}
+model2 <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
+            data = spotify_final)
+summary(model2)
+```
+The model simultaneously can predict  track popularity, with F(10, 25723) = 125.9, p < 0.001. All predictors could explain 4.6% variance of  track popularity (R-squared=0.046). However, danceability is not significantly predict track popularity.  The equation for the model is: 
+track popularity = 66 + 1.69* danceability - 19.53 * energy + 1.05 * loudness - 3.73 * speechness + 2.86 * acousticness - 8.82 * instrumentalness  - 2.09 * liveness + 3.14 * valence + 0.02*tempo - 1.72 * duration   
+
+### Comparing the two models.
+```{r}
+anova(model1, model2)
+sum_model1 <- glance(model1)
+sum_model2 <- glance(model2)
+
+comparison_mod <- sum_model1 %>% 
+  rbind(sum_model2) %>% 
+  mutate(model = c("simple", "complex")) %>%
+  relocate(model) %>% 
+  as.data.frame()
+comparison_mod
+```
+The model comparison is shown in the following table. The AIC of  model2 (AIC = 228779) is lower compare to simple model (AIC = 229653), thus this model is better explain the data. Thus, we can infer that by perceptual variables in model aside from the already used objectively measured variables would improve our understanding of track popularity.
+
 ## Conclusion linear regression analysis
 Regression model has met the assumption of linearity, normality of residuals, homoscedasticity, and multicolinearity. All variables, except `danceability`, are statistically significant to predict `track_popularity`. Among all predictors, `energy`, `loudness`, `instrumentalness`, and `duration_min` are the best predictors. However, all predictors included in the model only explain 4,6% variance of `track_popularity`. 
 
 # Summary
-From the exploratory data analysis, we can infer that Rap and Pop the most frequent genre in spotify, whereas latin is the least frequent genre in spotify.Each genre has its specific characteristic. For instance, Rock and edm genre has a high level of energy and Rock has low level of danceability. Visual analysis by jitter plot  shows that the most popular songs on Spotify have low level of acousticness, high level of danceability, short duration_min, high level of energy, low level of instrumentalness, low level liveness, high level of loudness, and low level of speechiness.The linear regression analysis shows that All variables are statistically significant to predict track_popularity, except danceability. Among all predictors, energy, loudness, instrumentalness, and duration_min are the best predictors. However, all predictors included in the model only explain 4,6% variance of track_popularity.   
-
-
+From the exploratory data analysis, we can infer that Rap and Pop the most frequent genre in spotify, whereas latin is the least frequent genre in spotify. Each genre has its specific characteristic. For instance, Rock and edm genre has a high level of energy and Rock has low level of danceability. Visual analysis by jitter plot  shows that the most popular songs on Spotify have low level of acousticness, high level of danceability, short duration_min, high level of energy, low level of instrumentalness, low level liveness, high level of loudness, and low level of speechiness.The linear regression analysis shows that All variables are statistically significant to predict track_popularity, except danceability. Among all predictors, energy, loudness, instrumentalness, and duration_min are the best predictors. However, all predictors included in the model only explain 4,6% variance of track_popularity.   
