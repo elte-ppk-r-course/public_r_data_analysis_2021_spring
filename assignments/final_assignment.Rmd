@@ -130,13 +130,6 @@ died_by <- emperors %>%
 
 died_by
 
-```
-
-
-## The duration of the reign
-
-
-``` {r}
 age_and_long <- emperors %>%
   ggplot(aes(age_reign_start, reign_long_year)) +
   geom_point(alpha = 0.2, color = "red") +
@@ -184,12 +177,15 @@ emperors_principate <- emperors %>%
     killer_recoded = recode(killer, "Aneurism" = "Health", "Heart Failure" = "Health", "Disease" = "Health",
                             "Lightning" = "Natural   Phenomenon", "Fire" = "Natural Phenomenon", "Wife" = "Other Opponents",
                             "Court Officials" = "Other Opponents", "Usurper" = "Other Opponents"),
-#Making dummy variables from the cause_recoded
+#Recoding the factor rise
+#Creating to categories: Birthright, Appointed
+    rise_recoded = recode(rise, "Birthright" = "Birthright", .default = "Other"),
+#Making dummy variables from the cause_recoded for the models
     died_by_force = recode(cause_recoded, "Forced" = 1, "Battle" = 0, "Natural Causes" = 0),
     died_by_battle = recode(cause_recoded, "Forced" = 0, "Battle" = 1, "Natural Causes" = 0),
     died_naturally = recode(cause_recoded, "Forced" = 0, "Battle" = 0, "Natural Causes" = 1)
     ) %>%
-  dplyr:: select(index, name, rise, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year) %>%
+  dplyr:: select(index, name, rise_recoded, cause_recoded, killer_recoded, everything(), -cause, -killer, - birth_year, -death_year, -rise) %>%
 #Removing missing data  
   na.omit()
 
@@ -200,31 +196,61 @@ emperors_principate <- emperors %>%
 As the emperors have fallen by many reasons it must be interesting to find out, which factors can predict the death of emperors. 
 
 ``` {r}
-#null model for modelling the predictors of dying by force
+#null model for modeling the predictors of dying by force
 model_forced_null <- glm(died_by_force ~ 1, data = emperors_principate, family = binomial)
 summary(model_forced_null)
 #enter all the variables into the model
-model_forced <- glm(died_by_force ~ rise + century + age_reign_start + reign_long_year, data = emperors_principate, family = binomial)
+model_forced <- glm(died_by_force ~ rise_recoded + century + age_reign_start + reign_long_year, data = emperors_principate, family = binomial, control=glm.control(maxit=50))
 summary(model_forced)
 
-#null model for modelling the predictors of dying in battle
+#null model for modeling the predictors of dying in battle
 model_battle_null <- glm(died_by_battle ~ 1, data = emperors_principate, family = binomial)
 summary(model_battle_null)
 #enter all the variables into the model
-model_battle <- glm(died_by_battle ~ rise + century + age_reign_start + reign_long_year, data = emperors_principate, family = binomial)
+model_battle <- glm(died_by_battle ~ rise_recoded + age_reign_start, data = emperors_principate, family = binomial, control=glm.control(maxit=50))
 summary(model_battle)
 
-#null model for modelling the predictors of dying naturally
+#null model for modeling the predictors of dying naturally
 model_natural_null <- glm(died_naturally ~ 1, data = emperors_principate, family = binomial)
 summary(model_natural_null)
 #enter all the variables into the model
-model_natural <- glm(died_naturally ~ rise + age_reign_start, data = emperors_principate, family = binomial)
+model_natural <- glm(died_naturally ~ rise_recoded + age_reign_start, data = emperors_principate, family = binomial, control=glm.control(maxit=50))
 summary(model_natural)
 ```
 
 The AIC number of the fitted models was only higher in the case of the predictive model of dying naturally (fitted model: 52.224, null model: 55.413). This means that the variance in the case of dying in battle or by force cannot be explained by the variables in the dataset, so I will continue to work on the model related to dying naturally.
 
 ``` {r}
+sjPlot:: tab_model(model_natural_null, model_natural, show.ci = FALSE, show.est = TRUE, show.fstat = TRUE, show.aic = TRUE, show.loglik = TRUE)
 
+natural_prob <- predict(model_natural, data = emperors_principate, type = "response")
+natural_odds <- natural_prob / (1 - natural_prob)
 
+#creating a classification table to check the predictions
+classDF <- data.frame(response = emperors_principate$died_naturally, predicted = round(fitted(model_natural),0))
+class_table <- xtabs(~ predicted + response, data = classDF)
+# checking the sensitivity of the model
+sensitivity <- class_table[2,2] / (class_table[2,1] + class_table[2,2])
+cat("The sensitivity of the model: ", sensitivity)
+#checking the specificity of the model
+specificity <- class_table[1,1] / (class_table[1,2] + class_table[1,1])
+cat("The specificity of the model: ", specificity)
+
+#plotting the model
+model_natural_plot <- emperors_principate %>%
+  ggplot(aes(age_reign_start, died_naturally, color = rise_recoded)) +
+  geom_point(alpha = 0.2, color = "red") +
+  geom_smooth(
+     method = "glm", 
+     color = "blue",
+     se = FALSE, 
+     method.args = list(family = binomial)
+   ) +
+  facet_wrap(vars(rise_recoded)) +
+  theme_light() +
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+  ylab("Died by a natural death") +
+  xlab("The age of emperors when their reign started")
+
+model_natural_plot
 ```
