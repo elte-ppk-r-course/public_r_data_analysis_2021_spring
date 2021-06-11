@@ -9,6 +9,8 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(psych)
+library(MVN)
 ```
 
 # Introduction
@@ -103,14 +105,18 @@ Talk about the limitations of your study and findings.
 Read the Animal Rights Scale (ARQ) dataset from the 'data/' folder. Pay attention to the extension.
 
 ```{r}
+animal <- read.csv("E:/Google Drive UMM/PhD ELTE/Semester 2/R programming/git/public_r_data_analysis_2021_spring/data/assignment_5_dataset.csv")
 
 ```
 
 ## EDA
 
 ```{r}
-
+glimpse(animal)
+summary(animal)
+describe(animal)
 ```
+Looking at the summary of each variable allowed us to identify any initial abnormal values. None of the numeric variables had any apparent outliers. 
 
 ## Data manipulation
 
@@ -119,7 +125,11 @@ Recode the sex and party variables as factor type variables with the following l
   * party: 1 - democrat, 2 - republican, 3 - other, 4 - none
 
 ```{r}
+animal_recode <- animal %>% 
+  mutate(sex = recode_factor(sex, `1` = "Male", `2`="Female")) %>% 
+  mutate(party = recode_factor(party, `1`="democrat", `2`="republican", `3`="other", `4`="none"))
 
+animal_recode
 ```
 
 # Creating a correlation matrix
@@ -127,13 +137,14 @@ Recode the sex and party variables as factor type variables with the following l
 __Note:__ Remember to only include the variables of the questionnaire that will be part of the factor analysis.
 
 ```{r}
-
+items <- animal %>% 
+  select(starts_with("ar"))
 ```
 
 Create the correlation matrix.
-
 ```{r}
-
+cor_matrix <- lowerCor(items)
+cor_matrix
 ```
 
 ## Visualizing the correlation matrix
@@ -141,7 +152,7 @@ Create the correlation matrix.
 Create a visualization of the results of the correlation matrix.
 
 ```{r}
-
+cor.plot(cor_matrix, MAR = 2.5, cex = 0.5, main = "Correlation matrix of the items", upper = F)
 ```
 
 ## Test for factorability
@@ -149,59 +160,73 @@ Create a visualization of the results of the correlation matrix.
 Calculate the KMO score.
 
 ```{r}
-
+KMO(cor_matrix)
 ```
+The overall KMO for the data is 0.88 which is excellent - this suggests that we can go ahead with our planned factor analysis.
 
 ## Test for multivariate normality
 
 ```{r}
-
+multi_norm <- mvn(items, mvnTest = "energy")
+multi_norm$multivariateNormality
 ```
+multivariate normality analysis using energy test shows that the data is not meet the assumption of multivariate normality (p < 0.05)
 
 Test for skewness and kurtosis.
-
 ```{r}
-
+skew_kurt <- mvn(items, mvnTest = "mardia")
+skew_kurt$multivariateNormality
 ```
+multivariate analysis using mardia test shows that the skewness and kurtosis are not meet the assumption of multivariate normality (p < .05)
 
 ## Create scree plot
-
 Create a scree plot to help the decision on how many factors to include.
 
 ```{r}
-
+scree(items)
+fa.parallel(items)
 ```
+Parallel analysis suggests that the number of factors is 4 and the number of components is 2. Therefore, the further analysis will run the factor analysis with 4 factors
 
 ## Run the factor analysis
 
 Run the factor analysis with the chosen number of factors.
+```{r}
+fa_result <- fa(items, nfactors = 4, fm = "minres", rotate = "oblimin")
+print(fa_result$loadings, cutoff = 0.3)
+```
+Factor analysis was conducted using factoring method of minimum residual since the distributional assumption (normality multivariate) is not met. Oblimin rotate factor was used  as they allow inter-factor correlations with the number of factor was specified as 4. 
+
+Since there were several items (5 items: ar3, ar12, ar14, ar16, ar25) that have low loading factor (below 0.3) on the main factor, and one item (ar15) that have high cross-loading, those items are excluded and analysis was re-run with the rest of items.
 
 ```{r}
-
+items_fix <- items %>% 
+  select(-c(ar25, ar16, ar3, ar12, ar14, ar15, ar15))
+fa_result <- fa(items_fix, nfactors = 4)
 ```
 
 Sort the communality scores in decreasing order.
-
 ```{r}
-
+sort(fa_result$communality, decreasing = T)
 ```
+All of the communality score are higher than 0.2
 
 Calculate the mean communality scores.
-
 ```{r}
-
+mean(fa_result$communality)
 ```
+mean of communality scores are 0.44
 
 Show the factor loadings for the chosen factor structure.
-
 ```{r}
-
+print(fa_result$loadings, cutoff = 0.3, digits = 2, sort = T)
 ```
+The items are distributed to each factor with high loading factor and low cross-loading. Factor 1 (item ar4, ar5, ar13, ar22, ar23, ar26) was named as "animal use". Factor 2 (item ar2, ar6, ar17, ar59, ar8, ar37, ar44, ar38) was named as "animal research". Factor 3 (item ar19, ar21, ar20) was named as "animal concern". Factor 4 (item ar7, ar10, ar24, ar1, ar28) was named as "save animal lives".   
 
 Visualize the factor structure.
 
 ```{r}
-
+fa.diagram(fa_result, digits = 2)
 ```
 
 ## Run linear regression
@@ -209,18 +234,21 @@ Visualize the factor structure.
 Calculate the factor scores.
 
 ```{r}
-
+fa_result$scores
 ```
 
 Bind factor scores to the original dataset.
 
 ```{r}
-
+animal2 <- animal %>% 
+  cbind(fa_result$scores)%>% 
+  rename(animal_use = MR1, animal_research = MR2, animal_concern = MR3, animal_lives = MR4)
 ```
 
 Run the logistic regression.
 
 ```{r}
-
+regres <- lm(liberal ~ animal_use + animal_research + animal_concern + animal_lives, data = animal2)
+summary(regres)
 ```
-
+Linear regression analysis shows that attitude toward saving animal lives is the most influential predictor of how liberal a person is (B = 0.35; p < 0.001). 

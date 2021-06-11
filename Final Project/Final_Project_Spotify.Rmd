@@ -1,0 +1,296 @@
+---
+title: "Final_Project_Spotify"
+author: "Hanif Akhtar"
+date: "5/31/2021"
+output: 
+  html_document: 
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Spotify data analysis
+
+# Introduction
+
+The background underlying of this analysis is to get a better understanding of the behavior of music when listening to songs on Spotify. In this analysis I will explore the feature of a song and its effect to the popularity of a song based on a Spotify data set from the TidyTuesday series. Specifically, there are several subgoals of the analyses: 1) To explore the popular song and genre and their characteristics, and 2) to predict the `track_popularity` of a song based on the features of a song (`danceability`, `energy`, `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`, `valence`, `tempo`, `duration_ms`) using multiple linear regression analysis. After cleaning the data, I will explore the variables and carefully constructed ggplots to conduct numerical and visual analyses.
+
+## Loading Library and Data
+The data used in this project was obtained from the [GitHub TidyTuesday project](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/spotify_songs.csv).
+
+```{r}
+library(tidyverse)
+library(DT)
+library(psych)
+library(car)
+library(broom)
+
+spotify <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+
+## Preliminary Exploration and Data Cleaning
+
+```{r}
+glimpse(spotify)
+```
+Based on the data structure above, there are variables whose data types need to be adjusted based on the nature of the data.
+
+```{r}
+spotify <- spotify %>%
+  mutate(track_id = as.factor(track_id),
+    track_name = as.factor(track_name),
+    track_artist = as.factor(track_artist),
+    track_popularity = as.integer(track_popularity),
+    track_album_id = as.factor(track_album_id),
+    track_album_name = as.factor(track_album_name),
+    track_album_release_date = as.factor(track_album_release_date),
+    playlist_name = as.factor(playlist_name),
+    playlist_id = as.factor(playlist_id),
+    playlist_genre = as.factor(playlist_genre),
+    playlist_subgenre = as.factor(playlist_subgenre),
+    key = as.factor(key),
+    duration_ms = as.integer(duration_ms),
+    mode = as.factor(mode),
+    mode = fct_recode(mode, Minor = "0", Mayor = "1"))
+glimpse(spotify)
+```
+I change the the variable of `track_name`, `track_artist`, `track_album_id`, `track_album_name`, `track_album_release_date`, `playlist_name`, `playlist_id`, `playlist_genre`, `playlist_subgenre`, `key`, and `mode` as factors and  `track_popularity` and `duration_ms` as integers.
+
+### Missing value
+```{r}
+colSums(is.na(spotify))
+spotify <- spotify %>% 
+  filter(track_name != " ")
+```
+I found five missing values in `track_name` which I removed from the data set
+
+### Duplicated data
+```{r}
+table(duplicated(spotify$track_id))
+spotify_unique <- spotify[!duplicated(spotify$track_id),]
+```
+I found there are duplicates in `track_id` because a track can be contained in multiple playlists. So I need to delete those duplicate `track_id` in the dataset. Since the `track_id` is unique and the other measured variables of the song remain the same, I will remove the duplicate song based on the `track_id`.
+
+# Removing unused variables
+```{r}
+spotify_concise <- spotify_unique %>% 
+  select(track_name, track_artist, track_popularity, playlist_genre, mode, danceability,
+         energy, loudness, speechiness, acousticness, instrumentalness,
+         liveness, valence, tempo, duration_ms) %>% 
+  mutate(duration_min = duration_ms / 60000) %>% 
+  select(-duration_ms)
+```
+I removed several variables that won't be used in the analysis to make it concise. I also convert duration into minutes to make it easy to understand by lay people
+
+### Histogram of Song's Feature
+```{r}
+feature_names <- names(spotify_concise)[c(3, 6:15)]
+songs_char <- spotify_concise %>% 
+            select(c(feature_names)) %>%
+            pivot_longer(cols = feature_names)
+
+songs_char %>%
+  ggplot(aes(x = value)) +
+  geom_histogram() +
+  facet_wrap(~name, ncol = 4, scales = 'free') +
+  labs(title = "Histogram of Song's Feature") +
+  theme(axis.text.y = element_blank())
+```
+`duration_min` and `valence` are normally distributed. `danceability`, `energy`, and `loudness` are skewed to the left. `acousticness`, `liveness`, and `speechiness` are skewed to the right. There are The high number of track with a zero popularity rating. Since `track_popularity` will be the central of this analysis, I decide to proceed the analysis by excluding data which has zero `track_popularity`
+
+### Final datast
+```{r}
+spotify_final <- spotify_concise %>% 
+  filter(track_popularity != 0)
+```
+
+### Preview of final dataset
+```{r}
+summary(spotify_final)
+head(spotify_final, 100) %>%
+  datatable(filter = 'top', options = list(pageLength = 10))
+```
+
+# Exploratory Data Analysis
+
+## What is the most popular song?
+The following table shows the top 10 most popular song
+```{r}
+spotify_final %>%
+  select(track_name, track_artist, track_popularity) %>%
+  arrange(-track_popularity) %>%
+  distinct() %>%
+  head(10) %>% 
+  datatable(filter = 'top', options = list(pageLength = 10))
+```
+
+## What is the most frequent genre?
+The following graph shows the number of song in each genre
+```{r}
+spotify_final %>%
+  count(playlist_genre) %>%
+  mutate(playlist_genre = fct_reorder(playlist_genre, n)) %>% 
+  ggplot() +
+  geom_col(aes(x = n, y = playlist_genre, fill = playlist_genre)) +
+  ggtitle("The number of Songs in each genre") + 
+  xlab("Genre") + 
+  ylab("Number of songs")
+```
+Rap and Pop the most frequent genre in spotify, whereas latin is the least frequent genre in spotify
+
+## Characteristic of each genre
+```{r}
+genre_char <- spotify_final %>%
+            select(c('playlist_genre', feature_names)) %>%
+            pivot_longer(cols = feature_names) 
+
+genre_char %>%
+  ggplot(aes(x = value)) +
+  geom_density(aes(color = playlist_genre)) +
+  facet_wrap(~name, ncol = 4, scales = 'free') +
+  labs(title = "Song's feature in each genre") +
+  theme(axis.text.x = element_text(angle = 50, hjust = 1),
+        axis.text.y = element_blank())
+```
+The visualization above shows that songs from different genres actually follow different characteristic patterns. The results of the observations are:
+- Rock and edm genre has a high level of `energy`,
+- Rock has low level of `danceability`, while rap and latin have high level of `danceability`,
+- r&b, rap, and rock songs have shorter `duration_min` compared to Pop, latin and EDM.
+
+## Characteristic of popular songs
+```{r}
+feature_names_2 <- names(spotify_final)[c(6:15)]
+
+songs <- spotify_final %>% 
+  arrange(desc(track_popularity)) %>%
+  head(n = 500) %>%
+  pivot_longer(cols = feature_names_2) 
+
+songs %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_jitter(aes(color = playlist_genre)) +
+  facet_wrap(~name, ncol = 5, scales = 'free') +
+  labs(title = "Songs' Feature Pattern", x = '', y = "frequency") +
+  theme(axis.text.y = element_blank())
+```
+The jitter plot shows that the most popular songs on Spotify are
+- low level of `acousticness`
+- high level of `danceability`
+- short `duration_min`
+- high level of `energy`
+- low level of `instrumentalness`
+- low level `liveness`
+- high level of `loudness`
+- low level of `speechiness`
+
+## Correlation matrix
+```{r}
+corr_matrix <- spotify_final %>% 
+  select(track_popularity, danceability, 
+         energy, loudness, 
+         speechiness, acousticness, 
+         instrumentalness, liveness, 
+         valence, tempo, duration_min) %>% 
+  cor.plot(cex = 0.5, main = "Correlation matrix", upper = F, cuts = T)
+```
+Summary of correlation matrix:
+- A high positive correlation is between `energy` and `loudness`
+- A strong negative correlation is between `acousticness` and `energy`
+- Positive correlation between `track_popularity` with `acousticness`, `danceability`, `loudness`, and `valence`.
+- Negative correlation between `track_popularity` and `liveness`, `energy`, `instrumentalness`, and `duration_ms`.
+
+# Regression Analysis on Track Popularity
+
+Model 1 of regression analysis aims to predict the value of `track_popularity` based on variables that could be measured objectively (`loudness`, `tempo`, and `duration_min`). Model 2 of multiple Linear Regression aims to predict the value of the dependent variable `track_popularity` based on all of song characteristics, including perceptual variables (`danceability`, `energy`, `loudness`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`, `valence`, `tempo`, `duration_min`). Notice that the predictors used in the model 1 are a subset of the predictors used in model 2.
+
+```{r}
+model <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
+            data = spotify_final)
+```
+
+## Checking for influential outliers
+
+Check for outlier values in the model.
+```{r}
+cooksd <- cooks.distance(model)
+
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")
+abline(h = 3*mean(cooksd, na.rm=T), col="red")
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4*mean(cooksd, na.rm=T),names(cooksd),""), col="red")
+
+spotify_final <- spotify_final[-14447, ]
+
+model <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
+            data = spotify_final)
+summary(model)
+```
+I removed one data (no.1447) because it has hight Cooks distance
+
+## Assumption checking
+### Linearity of the data
+```{r}
+plot(model, which = 1)
+```
+The plot above indicates that there is no pattern in the residual plot. This suggests that we can assume linear relationship between the predictors and the outcome variables.
+
+### Normality of residual
+```{r}
+plot(model, which = 2)
+```
+In the plot above we can see that the residuals are roughly normally distributed.
+
+### Homogeneity of variance
+```{r}
+plot(model, which = 3)
+```
+This plot shows if residuals are spread equally along the ranges of predictors. It can be seen that the variances of the residual points doesn't increase or decrease with the value of the fitted outcome variable, suggesting constant variances in the residuals errors (or heteroscedasticity).
+
+### Multicolinearity
+```{r}
+vif(model)
+```
+All variables have VIF below 5, then there is no problem with multicolinearity
+
+
+## Model comparison
+### Model 1
+```{r}
+model1 <- lm(track_popularity ~ loudness + tempo + duration_min,
+            data = spotify_final)
+summary(model1)
+```
+The model simultaneously can predict track popularity, with F(3, 25730) = 114.7, p < 0.001. All predictors could explain 1.3% variance of track popularity (R-squared=0.013). However, tempo is not significantly predict track popularity. The equation for the model is: 
+track popularity =  52.88 + 0.27 * loudness + 0.003 * tempo - 2.17 * duration
+
+### Model 2
+```{r}
+model2 <- lm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min,
+            data = spotify_final)
+summary(model2)
+```
+The model simultaneously can predict  track popularity, with F(10, 25723) = 125.9, p < 0.001. All predictors could explain 4.6% variance of  track popularity (R-squared=0.046). However, danceability is not significantly predict track popularity.  The equation for the model is: 
+track popularity = 66 + 1.69* danceability - 19.53 * energy + 1.05 * loudness - 3.73 * speechness + 2.86 * acousticness - 8.82 * instrumentalness  - 2.09 * liveness + 3.14 * valence + 0.02*tempo - 1.72 * duration   
+
+### Comparing the two models.
+```{r}
+anova(model1, model2)
+sum_model1 <- glance(model1)
+sum_model2 <- glance(model2)
+
+comparison_mod <- sum_model1 %>% 
+  rbind(sum_model2) %>% 
+  mutate(model = c("simple", "complex")) %>%
+  relocate(model) %>% 
+  as.data.frame()
+comparison_mod
+```
+The model comparison is shown in the following table. The AIC of  model2 (AIC = 228779) is lower compare to simple model (AIC = 229653), thus this model is better explain the data. Thus, we can infer that by perceptual variables in model aside from the already used objectively measured variables would improve our understanding of track popularity.
+
+## Conclusion linear regression analysis
+Regression model has met the assumption of linearity, normality of residuals, homoscedasticity, and multicolinearity. All variables, except `danceability`, are statistically significant to predict `track_popularity`. Among all predictors, `energy`, `loudness`, `instrumentalness`, and `duration_min` are the best predictors. However, all predictors included in the model only explain 4,6% variance of `track_popularity`. 
+
+# Summary
+From the exploratory data analysis, we can infer that Rap and Pop the most frequent genre in spotify, whereas latin is the least frequent genre in spotify. Each genre has its specific characteristic. For instance, Rock and edm genre has a high level of energy and Rock has low level of danceability. Visual analysis by jitter plot  shows that the most popular songs on Spotify have low level of acousticness, high level of danceability, short duration_min, high level of energy, low level of instrumentalness, low level liveness, high level of loudness, and low level of speechiness.The linear regression analysis shows that All variables are statistically significant to predict track_popularity, except danceability. Among all predictors, energy, loudness, instrumentalness, and duration_min are the best predictors. However, all predictors included in the model only explain 4,6% variance of track_popularity.   

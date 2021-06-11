@@ -20,6 +20,9 @@ You will have to create 3 plots based on the datasets and instructions detailed 
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(viridis)
+library(scales)
+library(RColorBrewer)
 ```
 
 ## Task 1: Climbing expeditions
@@ -31,7 +34,21 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 -   The bar colors use the viridis palette and light theme.
 
 ```{r}
+expeditions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv')
 
+str(expeditions)
+
+top_peak <- fct_lump_n(f = expeditions$peak_name, n = 15)
+expedition2 <- subset(expeditions, peak_name == top_peak)
+  
+ggplot(data = expedition2, 
+  aes(y = fct_rev(fct_infreq(peak_name)), fill = season)) + 
+  geom_bar() + 
+  theme_light() +
+  ggtitle("The most 15 popular peaks stacked by season of expedition") +
+  labs(x = "Number of expeditions", y = "") +
+  scale_fill_viridis(discrete = T) +
+  theme(legend.position = "bottom")
 ```
 
 ## Task 2: PhDs awarded
@@ -45,7 +62,22 @@ Notes:
 -   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+phd_field <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+str(phd_field)
 
+ag_phd <- phd_field %>%
+	group_by(broad_field, year) %>%
+	summarize(n = sum(n_phds, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = n, color = broad_field)) +
+  geom_line(size = 1.2) +
+  scale_x_continuous(breaks = scales::pretty_breaks(5)) + 
+  scale_y_continuous(labels = comma_format()) +
+  ggtitle("Number of awarded Ph.D.-s in the US by year") +
+  labs(x = "", y = "") +
+  theme_minimal() +
+  scale_color_brewer(palette = "Dark2")
+
+ag_phd
 ```
 
 ## Task 3: Commute in the US
@@ -59,5 +91,35 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+commute_mode <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv")
+head(commute_mode)
+str(commute_mode)
+  
+ag_commute <- commute_mode %>%
+	group_by(state_region, state_abb, mode) %>%
+	summarise(n = sum(n, na.rm = TRUE))
 
+ag_bike <- ag_commute %>%
+  group_by(state_region, state_abb, n) %>%
+  filter(mode == "Bike") %>%
+  rename(n_biker = n)
+
+ag_walk <- ag_commute %>%
+  group_by(state_region, state_abb, n) %>%
+  filter(mode == "Walk") %>%
+  rename(n_walker = n)
+
+com_tot <- cbind(ag_walk, ag_bike)
+commuter <- list(ag_walk, ag_bike) %>% 
+  reduce(full_join, by = "state_abb")
+
+ggplot(data = commuter, aes(x= n_walker, y = n_biker, color = state_region.x)) +
+  labs(color = "State region") +
+  geom_point(size = 2) +
+  geom_text(aes(label=state_abb), colour = "black", size = 3.5, na.rm = TRUE) +
+  scale_x_log10(labels = comma) +
+  scale_y_log10(labels = comma) +
+  ggtitle("Title number of people walking vs biking  work in each SA state") +
+  labs(x = "Number of ppl walking to work (log N)", y = "Number of ppl biking to work (log N)") +
+  theme_light()
 ```
