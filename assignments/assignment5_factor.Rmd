@@ -1,0 +1,264 @@
+---
+title: "assignment5_factor"
+author: "Barnabás Buzás"
+date: '2021 06 12 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+library(Hmisc)
+library(corrplot)
+library(psych)
+library(moments)
+library(GPArotation)
+library(reshape2)
+library(olsrr)
+library(mctest)
+library(sjmisc)
+library(sjlabelled)
+library(sjPlot)
+```
+
+```{r}
+# Read the data
+
+library(readr)
+assignment_5_dataset <- read_csv("C:/Users/user/Desktop/PSZICHOLÓGIA/Doktori_1/R/assignment_5_dataset.csv")
+attach(assignment_5_dataset)
+```
+
+```{r}
+# EDA
+
+str(assignment_5_dataset)
+```
+
+```{r}
+# Data manipulation
+
+sexFac <- factor(sex, levels=1:2, labels=c("male", "female"))
+partyFac <- factor(party, levels=1:4, labels=c("democrat", "republican", "other", "none"))
+```
+
+```{r}
+# Creating a correlation matrix
+
+ar <- data.frame(ar1, ar2, ar3, ar4, ar5, ar6, ar7, ar8, ar9, ar10, ar11, ar12, ar13, ar14, ar15, ar16, ar17, ar18, ar19, ar20, ar21, ar22, ar23, ar24, ar25, ar26, ar27, ar28, stringsAsFactors = TRUE)
+res <- rcorr(as.matrix(ar))
+Mres <- as.matrix(res$r)
+```
+
+```{r}
+# Visualizing the correlation matrix
+
+corrplot(Mres, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+```{r}
+# Test for factorability
+
+Mar <- as.matrix(ar)
+KMO(Mar)
+```
+
+```{r}
+# Test for multivariate normality
+
+skewness(Mar)
+kurtosis(Mar)
+```
+
+```{r}
+# Create scree plot
+
+scree(Mres, factors = FALSE)
+```
+
+```{r}
+# Run the factor analysis
+
+efa_ar2 <- fa(Mar,nfactors=4,n.obs = NA,n.iter=1, rotate="oblimin", scores="regression", 
+residuals=FALSE, SMC=TRUE, covar=FALSE,missing=FALSE,impute="median",
+min.err = 0.001,  max.iter = 50,symmetric=TRUE, warnings=TRUE, fm="minres",
+ alpha=.1,p=.05,oblique.scores=FALSE,np.obs=NULL,use="pairwise",cor="cor",
+ correct=.5,weight=NULL)
+print(efa_ar2)
+efa_ar2_loadings <- loadings(efa_ar2, sort = TRUE)
+print(efa_ar2_loadings)
+
+# In this structure I would give these names to the factors: 
+## MR1: Wearing of leather and fur and use of animals
+## MR2: Research negative (exception: ar8, ar11)
+## MR3: Animal-human equality (exception: ar21)
+## MR4: Morality
+```
+
+```{r}
+# Visualize the factor structure
+plot(efa_ar2)
+```
+
+```{r}
+# Linear model - MR1 factor
+
+MR1_model <- 
+  lm(liberal ~  ar4 + ar5 + ar13 + ar22 + ar23 + ar26,
+      data = assignment_5_dataset)
+
+summary(MR1_model)
+plot(MR1_model)
+
+# Test the MR1 model
+
+# Outliers
+
+cd_MR1 <- cooks.distance(MR1_model)
+plot(cd_MR1)
+
+# Check normality
+
+ols_test_normality(MR1_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(MR1_model)
+
+# Check linearity
+
+plot(MR1_model, 1)
+
+# Check multicollinearity
+
+omcdiag(MR1_model)
+imcdiag(MR1_model)
+#There is multicollinearity, but the VIF is under 5. 
+
+# MR1 table
+tab_model(MR1_model)
+```
+
+```{r}
+# Linear model - MR2 factor
+
+MR2_model <- 
+  lm(liberal ~  ar2 + ar6 + ar8 + ar9 + ar11 + ar17 + ar18 + ar25 + ar27,
+      data = assignment_5_dataset)
+
+summary(MR2_model)
+plot(MR2_model)
+
+# Test the MR2 model
+
+# Outliers
+
+cd_MR2 <- cooks.distance(MR2_model)
+plot(cd_MR2)
+
+# Check normality
+
+ols_test_normality(MR2_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(MR2_model)
+
+# Check linearity
+
+plot(MR2_model, 1)
+
+# Check multicollinearity
+
+omcdiag(MR2_model)
+imcdiag(MR2_model)
+#There is multicollinearity, but the VIF is under 5. 
+
+# MR1 table
+tab_model(MR2_model)
+```
+
+```{r}
+# Linear model - MR2 factor
+
+MR3_model <- 
+  lm(liberal ~  ar12 + ar14 + ar15 + ar19 + ar20 + ar21,
+      data = assignment_5_dataset)
+
+summary(MR3_model)
+plot(MR3_model)
+
+# Test the MR3 model
+
+# Outliers
+
+cd_MR3 <- cooks.distance(MR3_model)
+plot(cd_MR3)
+
+# Check normality
+
+ols_test_normality(MR3_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(MR3_model)
+
+# Check linearity
+
+plot(MR3_model, 1)
+
+# Check multicollinearity
+
+omcdiag(MR3_model)
+imcdiag(MR3_model)
+#There is multicollinearity, but the VIF is under 5. 
+
+# MR1 table
+tab_model(MR3_model)
+```
+
+```{r}
+# Linear model - MR4 factor
+
+MR4_model <- 
+  lm(liberal ~  ar1 + ar3 + ar7 + ar10 + ar24 + ar28,
+      data = assignment_5_dataset)
+
+summary(MR4_model)
+plot(MR4_model)
+
+# Test the MR2 model
+
+# Outliers
+
+cd_MR4 <- cooks.distance(MR4_model)
+plot(cd_MR4)
+
+# Check normality
+
+ols_test_normality(MR4_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(MR4_model)
+
+# Check linearity
+
+plot(MR4_model, 1)
+
+# Check multicollinearity
+
+omcdiag(MR4_model)
+imcdiag(MR4_model)
+#There is multicollinearity, but the VIF is under 5. 
+
+# MR1 table
+tab_model(MR4_model)
+```
+
+```{r}
+# Based on the four linear models, from the discovered four factors the first ("Wearing of leather and fur and use of animals") was the best predictor of liberal views. 
+```
+

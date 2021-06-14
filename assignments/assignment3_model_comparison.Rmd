@@ -1,0 +1,166 @@
+---
+title: "assignment3_model_comparison"
+author: "Barnabás Buzás"
+date: '2021 06 14 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(psych)
+library(sjPlot)
+library(broom)
+library(performance)
+library(olsrr)
+library(GGally)
+library(mctest)
+library(sjmisc)
+library(sjlabelled)
+```
+
+```{r}
+# Read data.
+assignment3 <- read_excel("assignment_3_dataset.xlsx")
+```
+
+```{r}
+# EDA
+
+str(assignment3)
+summary(assignment3)
+desc <- describe(assignment3)
+
+# Plots
+ggplot(assignment3, aes(x = age)) +
+  geom_density()
+ggplot(assignment3, aes(x = STAI_trait)) +
+  geom_density()
+ggplot(assignment3, aes(x = pain_cat)) +
+  geom_density()
+ggplot(assignment3, aes(x = cortisol_serum)) +
+  geom_density()
+ggplot(assignment3, aes(x = cortisol_saliva)) +
+  geom_density()
+ggplot(assignment3, aes(x = mindfulness)) +
+  geom_density()
+```
+
+```{r}
+# Filter out ID_142 (outlier)
+
+assignment3_filtered <- assignment3 %>%
+  filter(ID != "ID_142")
+```
+
+```{r}
+# Build the complex model
+
+complex_model <- 
+  lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva,
+      data = assignment3_filtered)
+```
+
+```{r}
+# View complex model
+
+summary(complex_model)
+tidy_complex_model <- tidy(complex_model, conf.int = TRUE, exponentiate = TRUE)
+plot(complex_model)
+```
+
+```{r}
+# Test the complex model
+
+# Outliers
+
+cd <- cooks.distance(complex_model)
+plot(cd)
+
+# Check normality
+
+ols_test_normality(complex_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(complex_model)
+
+# Check linearity
+
+plot(complex_model, 1)
+
+# Check multicollinearity
+
+X <- assignment3_filtered[,3:9]
+print(ggpairs(X))
+
+omcdiag(complex_model)
+imcdiag(complex_model)
+# There are four variables which cause multicollinearity. VIF is higher than 5 in the case of cortisol serum and cortisol saliva. If they are used as control variables, than this does not mean a problem. 
+```
+
+```{r}
+# Results of the complex model in table format
+
+tab_model(complex_model)
+```
+
+```{r}
+# Build the simple model
+
+simple_model <- 
+  lm(pain ~ age + sex,
+      data = assignment3_filtered)
+```
+
+```{r}
+# View simple model
+
+summary(simple_model)
+tidy_simple_model <- tidy(simple_model, conf.int = TRUE, exponentiate = TRUE)
+plot(simple_model)
+```
+
+```{r}
+# Test the simple model
+
+# Outliers
+
+cd_simple <- cooks.distance(simple_model)
+plot(cd)
+
+# Check normality
+
+ols_test_normality(simple_model)
+
+# Check heteroscedasticity
+
+ols_test_breusch_pagan(simple_model)
+
+# Check linearity
+
+plot(simple_model, 1)
+
+# Check multicollinearity
+
+X_simple <- assignment3_filtered[,3:4]
+print(ggpairs(X_simple))
+
+omcdiag(simple_model)
+imcdiag(simple_model)
+# In this model, there is no multicollinearity. 
+```
+
+```{r}
+# Results of the simple model in table format
+
+tab_model(simple_model)
+```
+
+```{r}
+# Comparison of the two models. 
+
+## The R square of the complex model is higher than the simple model. Therefore, I would use the complex model. On the other hand, there is only one significant predictor in this model, which is pain catastrophizing. As the instruction said, pain catastrophizing is a well-established predictor of pain, so this is not a new result. In the other model, there was also a significant predictor, age, but this prediction was very weak. 
+```
+
