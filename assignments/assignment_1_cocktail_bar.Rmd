@@ -1,6 +1,6 @@
 ---
 title: "Assignment 1: The cocktail bar (data transformation and manipulation)"
-author: "Tamas Nagy"
+author: "Shany Pritzker"
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -16,7 +16,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
+#library(tidyverse)
 ```
 
 # Background
@@ -31,8 +31,11 @@ Note: There are several different ways to solve these tasks, feel free to come u
 
 Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You can also find the codebook there.
 
-```{r}
-
+```{r read TSV}
+url <- "https://raw.githubusercontent.com/nthun/cocktail-balance/master/cocktail_data.tsv"
+download.file(url, "cocktails_data.tsv")
+cocktails <- read.csv("cocktails_data.tsv", header = T, sep = "\t")
+#View(cocktails)
 ```
 
 ## 2. Transform the data table and clean the ingredient variable!
@@ -40,7 +43,20 @@ Read the cocktail dataset from: <https://github.com/nthun/cocktail-balance> You 
 The ingredients are currently in a single cell for each cocktail. It would be better to put them in separate rows. Also, the variable should be cleaned of all quantities (e.g. 1/2 oz, 2 dashes, etc.), and the indicator of alcohol content (e.g. 47.3% abv). You will need to use this cleaned table in later tasks.
 
 ```{r}
+library(tidyr)
+library(dplyr)
+cocktails <- cocktails %>% separate_rows("ingredients", sep = "<br/>")
+cocktails <- cocktails %>% separate_rows("ingredients", sep = "<br>")
+cocktails <- cocktails %>% separate_rows("ingredients", sep = "<b4/>")
 
+cocktails <- cocktails %>% tidyr::separate(col = "ingredients", into = c("amount","ingredient"), sep = "oz|drops|drop|dashes|dash|bsp")
+
+cocktails <- cocktails %>% tidyr::separate(col = "ingredient", into = c("ingredient","alc.indicator"), sep = "[()]")
+
+#remove first & last white spaces from 'ingredient' vector:
+cocktails$ingredient <- cocktails$ingredient %>% trimws
+
+head(cocktails)
 ```
 
 ## 3. All ingredients in alphabetical order
@@ -48,7 +64,8 @@ The ingredients are currently in a single cell for each cocktail. It would be be
 Before opening the bar, you need to find a reliable supplier that has all the ingredients. You need to send a list of all possible ingredients you will need. They don't need the quantities (i.e. how many of these are needed), just the names of the ingredients.
 
 ```{r}
-
+ingredients <- cocktails$ingredient %>% unique %>% sort
+ingredients
 ```
 
 ## 4. Number of unique ingredients
@@ -56,7 +73,7 @@ Before opening the bar, you need to find a reliable supplier that has all the in
 How many different ingredients you will need?
 
 ```{r}
-
+length(ingredients)
 ```
 
 ## 5. What are the top 10 ingredients?
@@ -65,6 +82,9 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 
 ```{r}
 
+print('Top 10 ingredients w/ number of occurences:')
+occurrence <- cocktails$ingredient %>% table %>% sort
+occurrence %>% tail(10)
 ```
 
 ## 6. Which cocktail(s) has/have the most ingredients?
@@ -72,7 +92,11 @@ What are the 10 most frequently used ingredients? If there are ties, you can lis
 Count the number of ingredients and filter all the cocktails that has that many.
 
 ```{r}
+ingredient.sum <- cocktails %>% group_by(name) %>% count(ingredient) %>% summarise(ing.num = sum(n))
 
+max.ingredients <- ingredient.sum$ing.num %>% max
+
+ingredient.sum %>% filter(ing.num == max.ingredients)
 ```
 
 ## 7. How many ingredients appear in only one cocktail (rare ingredient)?
@@ -80,19 +104,26 @@ Count the number of ingredients and filter all the cocktails that has that many.
 Count all cocktails with only one ingredient, and
 
 ```{r}
-
+occurrence %>% as_tibble() %>% filter(n == 1) %>% nrow
 ```
 
 ## 8. Which cocktail has an ingredient that is only used in one cocktail?
 
 ```{r}
+rare <- occurrence %>% as_tibble() %>% filter(n == 1) 
+names(rare)[1] <- "ing"
+rare <- rare$ing
 
+c.rare <- cocktails %>% filter(ingredient %in% rare) %>% select(1)
+c.rare
 ```
 
 ## 9. What are the cocktails without rare ingredients?
 
 ```{r}
-  
+cocktails.names <- cocktails$name %>% unique
+cocktails.nonrare <- cocktails.names[!(cocktails.names %in% c.rare$name)]
+cocktails.nonrare
 ```
 
 ## 10. Create a cheat sheet for the bartender!
@@ -108,10 +139,18 @@ tribble(~name, ~Lime, ~`White rum`, ~`Cane sugar`, ~`Coca-cola`, ~Mint, ~Soda,
 ```
 
 ```{r}
+cheatsheet <- cocktails[,c("name","ingredient")] %>% table 
+cheatsheet <- cheatsheet %>% as.data.frame()
+cheatsheet$Freq <- cheatsheet$Freq %>% as.character()
+cheatsheet$Freq[cheatsheet$Freq == "0"] <- ""
+cheatsheet$Freq[cheatsheet$Freq == "1"] <- "X"
 
+cheatsheet <- cheatsheet %>% spread(ingredient,Freq)
+cheatsheet
 ```
 
 
 Congrats, the bar is now officially open!
 
 ![](https://i.pinimg.com/originals/4e/c1/0c/4ec10c9d32b2c7c28b4b638c7f809ec5.gif){width="320"}
+

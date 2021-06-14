@@ -1,63 +1,193 @@
 ---
 title: 'Assignment 2: Data visualization'
-author: "Tamas Nagy"
+author: "shany Colon Pritzker"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
-You will have to create 3 plots based on the datasets and instructions detailed below. You will find the plots themeselves in the `assignments/assignment_2_plots`. Your task is to write the code that will reproduce the plots as closely as possible.
-
-# Skills needed to solve this assignment
-
--   Using R and RStudio, reading data
--   Reporting using RMarkdown
--   Using Git and Github (for submitting the task)
--   Data manipulation (e.g. dplyr, tidyr), and working with factors (forcats)
--   Data visuzlization (ggplot2)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(tidytuesdayR)
+library(forcats)
+library(dplyr)
+library(ggplot2)
+library(viridis)
+#library(sqldf)
 ```
 
 ## Task 1: Climbing expeditions
 
-The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the three datasets, use the "expeditions". Reproduce the plot below! Notice a few things:
-
--   Use `forcats::fct_lump()` to get the 15 most frequent peaks, and drop the "Other" category.
--   The bars are ordered by the sum of all expeditions (use `fct_reorder()`).
--   The bar colors use the viridis palette and light theme.
 
 ```{r}
+options(warn=-1)
+
+
+#####################################TASK 1###################################
+
+
+####Stage 1 - Get the data
+tt_data <- tt_load("2020-09-22")
+#library(janitor)
+expeditions<-tt_data$expeditions
+
+
+####stage 2 -Get the 15 most popular peakes
+
+expeditions$small<-fct_lump(expeditions$peak_name,15)
+names(expeditions)[17]<-"peaks"
+expeditions<-expeditions[expeditions$peaks!="Other",]
+expeditions<-expeditions[is.na(expeditions$peaks)==FALSE,]
+
+expeditions_mini<-data.frame(expeditions[,c(17,5)])
+
+
+t<-expeditions_mini %>% group_by(peaks, season) %>% summarise(n = n())
+tt<-expeditions_mini %>% group_by(peaks) %>% summarise(n = n())
+tt<-tt[order(tt$n,decreasing = TRUE),]
+
+ttt<-merge(tt,t,by = "peaks")
+names(ttt)<-c("peaks","peakscount","season","n")
+ttt<-ttt[order(ttt$peakscount,decreasing = TRUE),]
+
+
+
+####stage 3- plot stacked bar using colors of virdis
+
+ggplot(ttt, aes(fill=season, y=n, x=reorder(peaks, peakscount))) + 
+  geom_bar(position="Stack", stat="identity")+
+  coord_flip()+
+  ggtitle("The 15 most popular peaks stacked by season of expedition")+
+  xlab("")+ 
+  ylab("Number of expeditions")+
+  scale_fill_manual(values = c(viridis(c(5:10))  ))+theme_bw()+theme(legend.position="bottom")
+
+
 
 ```
+
 
 ## Task 2: PhDs awarded
 
-The 2019-02-19 TidyTueday dataset is about phd-s awarded by year and field. There is only one dataset, it is called `phd_by_field`. Reproduce the plot below!
-
-Notes:
-
--   First you have to aggregate the data to count all phd-s by broad fields.
--   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
--   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
 
 ```{r}
+
+####Stage 1 - Get the data
+tt_data2 <- tt_load("2019-02-19")
+#library(janitor)
+phd<-tt_data2$phd_by_field
+
+
+
+####stage 2 - calculate number of phd in each brad field acording to year
+
+f<-data.frame(aggregate(n_phds ~ broad_field+year, data = phd, sum))
+
+ggplot(f, aes(x=year, y=n_phds, group=broad_field)) +
+  geom_line(aes(color=broad_field),size=1.2)+
+  ggtitle("Number of awarded Ph.d.-s in the US by year")+
+  ylab("")+ labs(color = "Broad field")+
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 5))+
+  scale_y_continuous(labels=scales::comma_format())+ scale_color_brewer(palette = "Dark2")+theme_minimal()
+
 
 ```
 
+
+
+
 ## Task 3: Commute in the US
 
-The 2019-11-05 TidyTueday dataset is about commuting to work in each city in the US by bike or on foot. There is only one dataset, it is called `commute`. Reproduce the plot below!
 
-Notes:
-
--   First you have to aggregate the data to count all commutes by state.
--   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
--   The point size is 2, . The theme is set to light.
 
 ```{r}
 
+#######################task 3###########################
+
+
+####Stage 1 - Get the data
+tt_data3 <- tt_load("2019-11-05")
+#library(janitor)
+commutee<-tt_data3$commute
+
+
+####calculate number of people walking and biking  in each brad field to state and state region
+
+commutee$bike[commutee$mode=="Bike"]<-1
+commutee$bike[commutee$mode!="Bike"]<-0
+
+commutee$walk[commutee$mode=="Walk"]<-1
+commutee$walk[commutee$mode!="Walk"]<-0
+
+commutee$bike_n<-commutee$bike*commutee$n
+commutee$walk_n<-commutee$walk*commutee$n
+
+
+commutee[is.na(commutee)]<-'NA'
+
+g1<-data.frame(aggregate(bike_n ~ state+state_region+state_abb, data = commutee, sum))
+g2<-data.frame(aggregate(walk_n ~ state+state_region+state_abb, data = commutee, sum))
+
+
+g1_g2<-merge(g1,g2)
+
+#g1_g2<-g1_g2[g1_g2$walk_n>=3000,]
+
+
+
+options(scipen = 999)
+ggplot(g1_g2, aes(x=walk_n, y=bike_n,color=state_region)) +
+  geom_point(size=2)+scale_x_continuous(trans='log10',labels=scales::comma_format())+
+  scale_y_continuous(trans='log10',labels=scales::comma_format())+ggtitle("Title number of people walking vs. biking to work in each USA state")+
+  xlab("Number of ppl walking to work (log N)")+
+  ylab("Number of ppl biking to work (log N)")+labs(color = "State region")+theme_minimal()+
+  geom_text(data=subset(g1_g2, state_abb=="CA"|
+                        state_abb=="NY"|
+                        state_abb=="WA" |
+                          state_abb=="FL" |
+                          state_abb=="OH" |
+                          state_abb=="NJ" |
+                          state_abb=="OR" |
+                          state_abb=="AZ" |
+                          state_abb=="MN" |
+                          state_abb=="IN" |
+                          state_abb=="UT" |
+                          state_abb=="LA" |
+                          state_abb=="IA" |
+                          state_abb=="CT" |
+                          state_abb=="KS" |
+                          state_abb=="NE" |
+                          state_abb=="ID" |
+                          state_abb=="MT" |
+                          state_abb=="AK" |
+                          state_abb=="RI" |
+                          state_abb=="ND" |
+                          state_abb=="VT" |
+                          state_abb=="NH" |
+                          state_abb=="DE" |
+                          state_abb=="WY"|
+                          state_abb=="IL"|
+                          state_abb=="MA"|
+                          state_abb=="MI"
+                          ),color="Black",
+            aes(label=state_abb))+scale_color_manual(breaks = c("North Central"
+                                                                ,"Northeast"
+                                                                ,"South"
+                                                                ,"West"
+                                                                ,"NA"
+                                                                
+                                                                
+                                                                ),
+                                                     values=c(
+                                                       "#F8766D"
+                                                       ,"#7CAE00"
+                                                       ,"#00BFC4"
+                                                               
+                                                               
+                                                               
+                                                              ,"purple"
+                                                               ,"grey45"))
+  
 ```
