@@ -1,0 +1,70 @@
+---
+title: "A2_plots"
+author: "Barnabás Buzás"
+date: '2021 06 12 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(viridis)
+library(tidyverse)
+library(scales)
+```
+
+```{r}
+# Data for the first plot
+
+members <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/members.csv')
+expeditions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv')
+peaks <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/peaks.csv')
+```
+
+```{r}
+# First plot
+
+expeditions %>%
+  mutate(new_peak_name = fct_lump(peak_name, n = 15)) %>%
+  drop_na(new_peak_name) %>%
+  filter(new_peak_name != "Other") %>%
+  ggplot(aes(x = fct_rev(fct_infreq(new_peak_name)), fill = season)) +
+  coord_flip() +
+  geom_bar() +
+  labs(title = "The 15 most popular peaks stacked by season of expedition") +
+  xlab(element_blank()) +
+  theme_light()
+```
+
+```{r}
+# Data for the second plot
+
+phd_field <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+```
+
+```{r}
+# Second plot
+
+aggdata1 <- aggregate(n_phds ~ broad_field + year, phd_field, sum)
+aggdata1 %>%
+  ggplot(aes(x = year, y = n_phds, fill = broad_field, color = broad_field)) +
+  geom_line() +
+  scale_x_continuous(breaks = pretty_breaks(n = 5)) +
+  labs(title = "Number of awarded Ph.D.-s in the US by year",
+       x = element_blank(),
+       y = element_blank()) +
+  scale_colour_discrete("Broad field")
+```
+
+```{r}
+# Data for the third plot
+
+commute_mode <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv")
+```
+
+```{r}
+# Third plot
+
+# I tried a lot, but I could not even start this :( 
+
+```
+
