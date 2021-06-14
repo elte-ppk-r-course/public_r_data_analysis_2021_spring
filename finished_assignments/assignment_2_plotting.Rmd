@@ -1,0 +1,133 @@
+---
+title: 'Assignment 2: Data visualization'
+author: "Tamas Nagy"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+You will have to create 3 plots based on the datasets and instructions detailed below. You will find the plots themeselves in the `assignments/assignment_2_plots`. Your task is to write the code that will reproduce the plots as closely as possible.
+
+# Skills needed to solve this assignment
+
+-   Using R and RStudio, reading data
+-   Reporting using RMarkdown
+-   Using Git and Github (for submitting the task)
+-   Data manipulation (e.g. dplyr, tidyr), and working with factors (forcats)
+-   Data visuzlization (ggplot2)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidytuesdayR)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(viridis)
+```
+
+## Task 1: Climbing expeditions
+
+The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the three datasets, use the "expeditions". Reproduce the plot below! Notice a few things:
+
+-   Use `forcats::fct_lump()` to get the 15 most frequent peaks, and drop the "Other" category.
+-   The bars are ordered by the sum of all expeditions (use `fct_reorder()`).
+-   The bar colors use the viridis palette and light theme.
+
+```{r}
+# Expeditions
+expeditions <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-09-22/expeditions.csv') %>%
+  mutate(peak_name = as.factor(peak_name),
+         searon = as.factor(season),
+         termination_reason = as.factor(termination_reason)) %>%
+  select(peak_name, season) %>%
+  mutate(peak_name, peak_name = fct_lump(peak_name, n = 15)) %>%
+  filter(peak_name != c("Other", NA)) %>%
+  group_by(peak_name) %>%
+  mutate(peak_name_occur = n())
+
+
+ggplot(expeditions , aes(fct_reorder(peak_name, peak_name_occur), fill = season)) +
+  geom_bar() +
+  coord_flip() +
+  theme_light() +
+  theme(legend.position = "bottom") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title = "The 15 most popular peaks stacked by season of expedition") +
+    xlab(NULL) +
+    ylab("Number of expeditions")
+
+
+
+```
+
+## Task 2: PhDs awarded
+
+The 2019-02-19 TidyTueday dataset is about phd-s awarded by year and field. There is only one dataset, it is called `phd_by_field`. Reproduce the plot below!
+
+Notes:
+
+-   First you have to aggregate the data to count all phd-s by broad fields.
+-   To make the x axis breaks pretty, use `scales::pretty_breaks()`, to make the y axis labels comma formatted, use `scales::comma_format()`.
+-   The line size is 1.2, the colors are from the brewer "Dark2" palette. The theme is set to minimal.
+
+```{r}
+phd_field <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv") %>%
+  mutate(broad_field = as.factor(broad_field),
+         major_field = as.factor(major_field),
+         field = as.factor(field))
+
+phd_field_agg <- phd_field %>%
+  select(broad_field, year, n_phds) %>%
+  group_by(broad_field, year) %>%
+  summarise(sum_phds = sum(n_phds, na.rm = TRUE))
+  
+ggplot(phd_field_agg, aes(year, sum_phds, color = broad_field)) +
+  geom_line(size = 1.2) +
+  theme_minimal() + 
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Number of awarded Ph.D.-s in the USA by Year",
+       color = "Broad field") +
+    xlab(NULL) +
+    ylab(NULL) +
+  scale_x_continuous(breaks = scales::breaks_pretty()) +
+  scale_y_continuous(labels = scales::comma_format())
+
+```
+
+## Task 3: Commute in the US
+
+The 2019-11-05 TidyTueday dataset is about commuting to work in each city in the US by bike or on foot. There is only one dataset, it is called `commute`. Reproduce the plot below!
+
+Notes:
+
+-   First you have to aggregate the data to count all commutes by state.
+-   Both axis scales are log transformed and the labels comma formatted, using `scales::comma_format()`
+-   The point size is 2, . The theme is set to light.
+
+```{r}
+commute_data <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-05/commute.csv") %>%
+  mutate(city = as.factor(city),
+         state = as.factor(state),
+         city_size = as.factor(city_size),
+         mode = as.factor(mode),
+        state_region = as.factor(state_region),
+        state_abb = as.factor(state_abb),
+        n = as.numeric(n)) %>%
+  select(state_abb, state_region, mode, n) %>%
+  group_by(state_abb, state_region, mode) %>%
+  summarize(commuters = sum(n, na.rm = TRUE)) %>%
+  spread("mode", "commuters")
+
+ggplot(commute_data, aes(Walk, Bike)) +
+  geom_point(size = 2, aes(color = state_region)) +
+  geom_text(aes(label = state_abb), size= 5, check_overlap = TRUE) +
+  scale_x_continuous(trans = "log10", labels = scales::comma_format()) +
+  scale_y_continuous(trans = "log10", labels = scales::comma_format()) +
+  theme_light() +
+  labs(title = "Number of people walking vs biking to work in each USA state",
+       color = "State region") +
+    xlab("Number of ppl walking to work (log10)") +
+    ylab("Number of ppl biking to work (log10)")
+  
+```
