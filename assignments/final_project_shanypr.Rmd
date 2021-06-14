@@ -1,0 +1,676 @@
+---
+title: "Final Project"
+author: "shany pritzker"
+date: "6/9/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+$\underline{Reading\space the\space data\space in\space to\space R :}$
+
+
+```{r,message=FALSE}
+options(warn=-1)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+summary <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-01/summary.csv')
+
+challenges <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-01/challenges.csv')
+
+
+castaways<-readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-01/castaways.csv')
+
+viewers<-readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-01/viewers.csv')
+
+jury_votes<-readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-06-01/jury_votes.csv')
+```
+
+
+$\LARGE\underline{Introduction\space to\space the\space topic\space and\space data\space set :}$
+
+In this project we will be using the survier data set which gives information about the American Tv show Survivor and it's 40 seasons. The data consists of 5 tables that cover the following information:
+
+$\normalsize\underline{viewers:}$: This table has 596 rows, each row represents an episode, for each episode we are given information about the original air date, season number, name of the episode ,number of viewers and the episode number(for the entire show and that specific season)
+
+
+$\normalsize\underline{castaways:}$ This table has 744 rows, each row represents a  participant of the show through its 40 seasons. For each participant we are given information about the season of participation, age, place of residence, personality type, order in which participant got eliminated and tribe he belonged to at the beginning and end.
+
+
+$\underline{challenges:}$ This table has 5023 rows, each row represents a challenge shown on the show. For each challenge we are given information about the season, episode, episode title,the day of the challenge,type and winners.Note that in this table a certain challenge may appear multiple times because when a challenge is won by a tribe each participant will appear in one row so we get multiple rows. 
+
+$\normalsize\underline{jury\space votes:}$ This table has 909 rows, each row has an indicator variable (0,1) showing us if a castaway that did not reach the final (and participated in the final vote) voted for a specific finalist. Each castaway will appear in the table several times, where the number of times is determined by the number of finalists in that season, for example on season 40 we had 3 finalists (Michelle,Nataly,Tony) so sarah appears three times and we can see she voted for tony.
+
+
+$\normalsize\underline{summary:}$ This table has 40 rows, each row represnts a short summary for each season. The information given includes location, date premire ,date of season end, time slot, viewrs in the season premiere and finale...
+
+
+$\Large\underline{Topicks\space we\space would \space like\space to\space adress\space:}$
+
+1) Has the popularity of the show changed over the years.
+
+2) Does the popularity of the show fluctuate during a season i.e does the number of viewers per episode change dramatically as we advance in the season.
+
+3) What are are the characteristics of people who get castled to the show i.e how old are they, where do they come form, what personality type do the have. Do the show producers prefer to pick younger people today compare to the first seasons.
+
+4) Is there a connection between where a participant lives and his personality to his age, i.e could we construct a regression model using state and personality to predict participent's age.
+
+
+
+$\Large\underline{Topic\space 1-\space show \space popularity \space over \space the\space years:}$
+
+In order to to see how the show popularity has changed over the years we will use the viewers and summary tables with ggplot in order to graph the avrage number of viewers in each season and graph the number of viewers at each episode.
+
+We begin with checking if we have missing data for our relevant columns, in this case our relevant columns are season(in summary and viewers tables),viewers_mean (summary table),and viewers(viewers table)
+ 
+
+```{r}
+
+colSums(is.na(viewers))
+
+
+
+```
+
+
+Looking above we can see that we have 22 missing values in the column viewers meaning with have 22 episodes with missing data about number of people who watched the episode. We will check which episodes these are in order to see if the missing data is missing from a specific season or it is something that happens through out the history of the show implying that missing values are likely to be a random mistake of not typing in the values.We also have 1 missing value for episode number overall, we will fill it in manually by checking with episode came before.
+
+```{r}
+#viewers[is.na(viewers$viewers)==TRUE,c(2,3)]
+
+kable(viewers[is.na(viewers$viewers)==TRUE,c(2,3)],caption="22 seasons with missing viewers number")
+```
+
+
+Looking above we can see that the missing values occur between seasons 2 and 15 and that it occurs through out multiple seasons meaning that removing those values from this specific graph wont cause us to leave out an entire season and lose its effect.
+
+
+
+
+
+```{r}
+colSums(is.na(summary))
+```
+
+
+Looking above we can see we have 2 missing values for viewers mean meaning we have 2 seasons that we don't have their average number of viewers per episode.
+We will check which season these are in order to see if we can replace them by calculating the average manually using the viewers table or we need to remove them.
+
+
+```{r}
+kable(summary[is.na(summary$viewers_mean)==TRUE,c(2)],caption="2 seasons with missing viewers mean")
+
+
+```
+
+Looking above we can see that the seasons with the missing values are season 39 and 40 and we just saw that after season 15 all episodes had their number of viewers in the viewers table so this means we can calculate the average number of viewers manually.
+
+$\normalsize\underline{calculating\space avarege\space number\space of\space viewers\space seasons\space 39\space and\space 40:}$
+
+
+
+```{r}
+
+season40<-viewers[viewers$season==40,]
+season39<-viewers[viewers$season==39,]
+
+summary$viewers_mean[summary$season==39]<-mean(season39$viewers)
+summary$viewers_mean[summary$season==40]<-mean(season40$viewers)
+
+
+
+```
+
+
+$\normalsize\underline{avarege\space number\space of\space viewers\space seasons:}$
+
+```{r}
+
+
+
+ggplot(data=summary, aes(x=season, y=viewers_mean)) +
+  geom_line(color="blue")+
+  geom_point()+ggtitle("Avarage number of viewers by season")+ylab("Viewers by millions")
+
+
+```
+
+
+Looking above we can see that the show is in a decline, especially after season 10. The show stars with the first two seasons having an average of above 25 million viewers, between season 3 and seasons 10 the average is relatively stable with about 20 million viewers and after that stars a rapid decline with the last 2 seasons having less then 10 million. 
+
+note: we are assuming that the ratings reported in this data reflect the true popularity of the show i.e we  are not addressing the fact that the way people consume TV entertainment has changed over the years and it is possible that   the show may have kept its popularity but that people watched it on other medias not reported in this data such as netflix,hulu,and other re runs options that were not available in the first few seasons of the show.
+
+
+
+$\normalsize\underline{number\space of\space  viewers\space in\space final\space by\space seasons:}$
+
+```{r}
+
+viewers_without_missing<-viewers[is.na(viewers$viewers)==FALSE,]
+
+ggplot(data=summary, aes(x=season, y=viewers_finale)) +
+  geom_line(color="green")+
+  geom_point()+ggtitle("Number of viewers in finale by season")+ylab("Viewers by millions")
+
+
+```
+
+Looking above we can see that the decline of the show is not only in the average number of viewers per season but also in the final.
+
+
+
+
+
+$\normalsize\underline{number\space of\space  viewers\space per\space episode:}$
+
+We remove episodes that don't have the viewers number and we fill in the value 500 for the first episode of season 34 which has a missing value for overall episode number. We do thus because we know that the previous episode (season 32 episode 14) was 499.
+```{r}
+
+
+kable(
+viewers_without_missing<-viewers[is.na(viewers$episode_number_overall)==TRUE,],caption="episode missing overall number")
+
+kable(
+viewers_without_missing<-viewers[viewers$season==33 & viewers$episode==14,],caption="epside before the one missing overall number")
+
+viewers$episode_number_overall[viewers$season==34&viewers$episode==1]<-500
+
+#viewers_without_missing[is.na(viewers_without_missing$episode_number_overall)==TRUE,]
+
+
+viewers_without_missing<-viewers[is.na(viewers$viewers)==FALSE,]
+
+ggplot(data=viewers_without_missing, aes(x=episode_number_overall, y=viewers)) +
+  geom_line(color="pink")+
+  geom_point()+ggtitle("Number of viewers by episode")+ylab("Viewers by millions")
+
+
+
+```
+
+
+Looking above we see that the number of viewers is declining when we look at all the episodes, the further an episode is on the show's historical time line the more likely it will have fewer viewers.An interesting thing that we see is that in the beginning we had bigger gaps between the points indicating bigger differences between episodes in the early seasons.A possible explanation for the high average we previously saw in the early seasons could be that the early seasons had several episodes that were extremely popular and "pulled" the average up. In the next section we will use some descriptive statistic
+that examine the way the number of viewers is distributed between episodes in each one of the seasons.
+
+$\Large\underline{Topic\space 2-\space episode\space viewers\space fluctuation\space between\space episodes\space in\space each\space season:}$
+
+
+We will look at the following table which shows the following statistics about the viewers distribution in every season:standard deviation,minimum,maximum,number of episodes in season.
+Note that the analysis will only use the episodes we have information about there viewing numbers i.e wont include the 22 we removed.
+
+
+```{r,message=FALSE}
+
+library(sqldf)
+library(gridExtra)
+
+t_s<-sqldf("select season
+      ,count(*)number_episodes
+      ,min(viewers)minimum_viewe
+      ,max(viewers)maximum_viewe
+      ,stdev(viewers)sd_viewe
+      from viewers_without_missing
+      group by season
+      
+      
+      ")
+
+
+kable(t_s,caption="summary statistics about distribution of viewers per episode through seasons")
+
+
+
+ggplot(data=t_s, aes(x=season, y=sd_viewe)) +
+  geom_line(color="navy")+
+  geom_point()+ggtitle("Standerd deviation viewers")+ylab("Standerd deviation")
+
+
+
+t_s2<-sqldf("select season,minimum_viewe as value,'minimum' as series from t_s
+            union
+            select season,maximum_viewe as value,'maximum' as series from t_s")
+
+
+
+ggplot(data=t_s2, aes(x=season, y=value, group=series)) +
+  geom_line(aes(color=series))+
+  geom_point()+ggtitle("Maximum vs Minimum Viewrs Per Season")+ylab("Number of viewers in millions")+guides(fill=guide_legend(title="series"))
+
+
+
+
+
+ggplot(data = viewers_without_missing[viewers_without_missing$season<=8,],aes(x=episode,y=viewers))+geom_bar(stat='identity',color="black",fill="green")+
+  facet_wrap(~season,ncol = 4)+ggtitle("season 1-8")
+
+
+ggplot(data = viewers_without_missing[viewers_without_missing$season>8 & viewers_without_missing$season<=16,],aes(x=episode,y=viewers))+geom_bar(stat='identity',color="black",fill="yellow")+
+  facet_wrap(~season,ncol = 4)+ggtitle("season 9-16")
+
+
+
+ggplot(data = viewers_without_missing[viewers_without_missing$season>16 & viewers_without_missing$season<=24,],aes(x=episode,y=viewers))+geom_bar(stat='identity',color="black",fill="blue")+
+  facet_wrap(~season,ncol = 4)+ggtitle("season 17-24")
+
+
+ggplot(data = viewers_without_missing[viewers_without_missing$season>24 & viewers_without_missing$season<=32,],aes(x=episode,y=viewers))+geom_bar(stat='identity',color="black",fill="navy")+
+  facet_wrap(~season,ncol = 4)+ggtitle("season 25-32")
+
+
+ggplot(data = viewers_without_missing[viewers_without_missing$season>32 & viewers_without_missing$season<=40,],aes(x=episode,y=viewers))+geom_bar(stat='identity',color="black",fill="red")+
+  facet_wrap(~season,ncol = 4)+ggtitle("season 33-40")
+
+
+
+```
+
+
+Looking above it seems like in most of the seasons there is not much variability between the episodes. As mentioned before it seems seasons 1-2 have the most extreme episodes in terms of number of viewers.Note the season 1-15 have bars missing these are episodes we removed at the beginning.
+
+
+
+$\Large\underline{Topic\space 3-\space characteristics\space of\space participents\space of\space the\space show:}$
+
+
+
+$\normalsize\underline{Age:}$
+
+Looking below we see that we have no missing values for age.
+```{r}
+colSums(is.na(castaways))
+```
+
+Looking below we can see a histogram of the distribution of the age of participants through out the history of the show.We can see that the most common age of participation is around the mid 20's early 30's. 
+```{r}
+
+
+ggplot(data=castaways, aes(castaways$age)) + 
+  geom_histogram(bins = 30,color="black", fill="light green")+ggtitle("Age distribution of castaways")+xlab("Age")+ylab("Number of castaways")
+
+
+
+t_s3<-sqldf("select season
+      
+      ,min(age)minimum_age
+      ,max(age)maximum_age
+      ,avg(age)avarage_age
+      ,stdev(age)sd_age
+      from castaways
+      group by season")
+
+t_s4<-sqldf("select season,minimum_age as value,'minimum' as series from t_s3
+            union
+            select  season,maximum_age as value,'maximum' as series from t_s3
+             union
+            select  season,avarage_age as value,'avg' as series from t_s3
+             union
+            select  season,sd_age as value,'sd' as series from t_s3
+            ")
+
+
+
+
+ggplot(data=t_s4, aes(x=season, y=value, group=series)) +
+  geom_line(aes(color=series))+
+  geom_point()+ggtitle("Maximum Minimum avrage,sd age participents by season")+ylab("Age")+guides(fill=guide_legend(title="series"))
+
+mean(castaways$age)# avg age
+
+```
+
+
+Looking above we see a graph showing the minimum,maximum,average, and standard deviation of participants through out the seasons. It seems that the average is relatively stable through the years implying there hasn't been a dramatic change.
+
+
+$\normalsize\underline{Personality:}$
+
+We saw before that we had 3 missing values from personality so for this specific analysis we will remove these rows.
+
+Note- According to the R documentation of the survivoR package these values are taken from the Myers-Briggs personality type which is an introspective self-report questionnaire indicating differing psychological preferences.
+
+ISTJ - The Inspector
+
+ISTP - The Crafter
+
+ISFJ - The Protector
+
+ISFP - The Artist
+
+INFJ - The Advocate
+
+INFP - The Mediator
+
+INTJ - The Architect
+
+INTP - The Thinker
+
+ESTP - The Persuader
+
+ESTJ - The Director
+
+ESFP - The Performer
+
+ESFJ - The Caregiver
+
+ENFP - The Champion
+
+ENFJ - The Giver
+
+ENTP - The Debater
+
+ENTJ - The Commander
+
+refrence:
+
+https://cran.r-project.org/web/packages/survivoR/survivoR.pdf
+
+https://www.verywellmind.com/the-myers-briggs-type-indicator-2795583
+
+
+```{r}
+castaways_no_missing_pers<-castaways[is.na(castaways$personality_type)==FALSE,]
+
+
+ggplot(data = castaways_no_missing_pers,aes(x=personality_type))+geom_bar(color="black",fill="3399FF")+ggtitle("Personality type of participents through the years")+ylab("number of participents")
+
+
+```
+
+
+
+Looking above we see that the most common personality types on the show are
+ENFP(champion),ESFP(performer),ESTP(persuader),and ISFP(artist). The two least common personality types are INFJ(advocate),and INTJ(architect).
+
+
+$\normalsize\underline{State:}$
+We previously saw that there are no missing values for this variable so we don't need to  observations. 
+
+
+```{r}
+
+
+ggplot(data = castaways,aes(x=state))+geom_bar(color="black",fill="66FFFF")+ggtitle("State of participents through the years")+ylab("number of participents")+coord_flip()
+
+
+
+
+```
+
+
+Looking above we see that the 4 most common states of residence for the participants are California,New York,Florida, and Texas. This should not be very surprising because this are the 4 largest states in terms of population. It seems that the gap between California (most populated state) and the other states in term of the number of participants is much bigger then the difference in population, this implies that there is a tendency to cast people from California. The explanation for that is likely to be technical/logistical, it is likely that the network is stationed in California probably Los Angles so it is easier to bring people from that area for auditions and cast them, recall that states reported in this data are states of current residence and not the original place where participant is from. 
+
+
+
+$\Large\underline{Topic\space 4-\space regresion\space analysis\space personality\space and\space state\space to\space predict\space age:}$
+
+Recall we removed 3 observations that had missing data for personality so we are left with 741 observations.
+
+
+we can see that personality and state are characters so we will turn them in to factors and turn age in to numeric.
+
+```{r}
+typeof(castaways_no_missing_pers$state)
+typeof(castaways_no_missing_pers$personality_type)
+typeof(castaways_no_missing_pers$age)
+
+
+
+castaways_no_missing_pers$state<-as.factor(castaways_no_missing_pers$state)
+castaways_no_missing_pers$personality_type<-as.factor(castaways_no_missing_pers$personality_type)
+
+
+castaways_no_missing_pers$age<-as.numeric(castaways_no_missing_pers$age)
+
+```
+
+
+We now will fit a multiple linear regression using personality and state to predict age.
+
+
+```{r}
+
+model <- lm(age ~state+personality_type ,
+            data = castaways_no_missing_pers)
+summary(model)
+
+```
+
+
+
+Looking above we can see a summary of the model. We can see that some coefficients are not significant. Recall that when we are using a categorical variable as a predictor (like we are doing here) the regression creates a dummy variable for the category so when a coefficient is not significant it means we can not conclude from the data that belonging to that category will change our expectation for the target value. Having coefficients that are not significant in categorical variables can many times be a result of too many categories and small amount of data in them. We will try to reduce the number of categories by binning categories with similar age average.
+
+
+$\normalsize\underline{binnig\space state:}$
+
+
+```{r}
+
+bm<-sqldf("select state
+,count(*)cnt
+,cast(count(*)as float)/cast(741 as float)pct
+         ,avg(age)avg_age from castaways_no_missing_pers
+      group by state
+      order by avg_age")
+
+
+kable(bm,caption="age avarage by state")
+
+
+```
+
+
+The table below shows us number of participants from each state, the percent and the average age of participants from that state, we will bin states with similar averages in order to get three categories.
+
+
+
+```{r,,message=FALSE}
+options(warn=-1)
+
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Delaware"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Mississippi"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Arkansas"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="D.C."]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Alabama"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Illinois"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Arizona"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Tennessee"]<-1
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Wisconsin"]<-1
+
+
+
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="New Jersey"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Maryland"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Oregon"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="New York"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Utah"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="California"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Colorado"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="South Carolina"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Texas"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Kentucky"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Idaho"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Washington"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Nevada"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Pennsylvania"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Georgia"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Massachusetts"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Michigan"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="North Carolina"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Florida"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Kansas"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Missouri"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Minnesota"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Louisiana"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Rhode Island"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Maine"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Ohio"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Iowa"]<-2
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Nebraska"]<-2
+
+
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="New Hampshire"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Indiana"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="South Dakota"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Connecticut"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Virginia"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Vermont"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Montana"]<-3
+castaways_no_missing_pers$state_split[castaways_no_missing_pers$state=="Oklahoma"]<-3
+
+
+bm2<-sqldf("select state_split
+,count(*)cnt
+,cast(count(*)as float)/cast(741 as float)pct
+         ,avg(age)avg_age from castaways_no_missing_pers
+      group by state_split
+      order by avg_age")
+
+
+kable(bm2,caption="age avarage by state split grouups")
+```
+
+
+Looking above we can see the 3 avarges for the three groups of state that we binned. It seems that there is not a very strong relationship between state and age but we will try to includ it in the model.
+
+
+$\normalsize\underline{binnig\space personality:}$
+
+```{r}
+
+hi<-sqldf("select personality_type
+,count(*)cnt
+,cast(count(*)as float)/cast(741 as float)pct
+         ,avg(age)avg_age from castaways_no_missing_pers
+      group by personality_type
+      order by avg_age")
+
+kable(hi,caption="age avarage by personality")
+```
+
+
+
+```{r}
+
+
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ESFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ISFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INTJ']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ENFP']<-1
+
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ESFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ISFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INTJ']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ENFP']<-1
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ENTP']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INTP']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ISTP']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ENTJ']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='INFJ']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ESTP']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ENFJ']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ESTJ']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ISTJ']<-2
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ISFJ']<-3
+castaways_no_missing_pers$personality_type_split[castaways_no_missing_pers$personality_type=='ESFJ']<-3
+
+
+hi2<-sqldf("select personality_type_split
+,count(*)cnt
+,cast(count(*)as float)/cast(741 as float)pct
+         ,avg(age)avg_age from castaways_no_missing_pers
+      group by personality_type_split
+      order by avg_age")
+
+
+kable(hi2,caption="age avarage by personality split grouups")
+
+
+```
+
+
+Looking above we can see the split personality groups , this seems to be a better variable then state
+
+$\normalsize\underline{model\:}$
+
+We fit a model with two binned variable, we remember to turn them in to factors
+```{r}
+
+castaways_no_missing_pers$state_split<-as.factor(castaways_no_missing_pers$state_split)
+castaways_no_missing_pers$personality_type_split<-as.factor(castaways_no_missing_pers$personality_type_split)
+
+
+model2 <- lm(age ~state_split+personality_type_split ,
+            data = castaways_no_missing_pers)
+summary(model2)
+
+```
+
+
+We can see above the summary of the model, we can see that both the variables are now significant and that R squared is 0.18 meaning our model does explain some of the variability in age but not very much.
+
+
+$\normalsize\underline{model\space assumptions:}$
+
+```{r}
+
+plot(model2, which = 1)
+
+
+```
+
+Looking above it does not seem like there is a pattern in residuals.
+
+
+```{r}
+plot(model2, which = 2)
+
+```
+
+
+Looking above it seems like residuals follow a follow normal distribution to some extent.
+
+
+```{r}
+plot(model2, which = 3)
+
+```
+
+
+Looking above it seems like residuals are restively equally spread across ranges of prediction values with variance being relatively stable.
+
+
+```{r,message=FALSE}
+
+library(car)
+vif(model2)
+```
+
+Looking above it does not seem like there is a problem of multicolinerity, this is because the values of vif are not high.
+
+$\normalsize\underline{conclusion\space of\space the\space model:}$
+We where able to fit a model that roughly met regression assumptions and had two predictors that where categorical and where found to be statistically significant. The model was not very strong but showed that there indeed exists some relationship between the place a participent lives, and thier personality to their age.
+
+
+$\Large\underline{Report\space Summary:}$
+
+Using descriptive statistics and visualition tools we were able to learn the following things:
+
+
+1) The show has declined over the years in terms of number of viewers per episode.
+
+2) There is not much fluctuation in number of viewers per episode for a given season.
+
+3) The most common age group for participants of the show is in mid 20 to early 30's
+with average age being 33.4 , in terms of age preference we did not see a change in the producers age preference, it seemed avrage age is relatively stable through seasons.
+
+4) Personality types of participants are measured on a Myers-Briggs scale and the most common personalities on the show include champion and performer.
+
+
+5) The state that has the most participants as residents is California.
+
+6) When using a linear regression model for predicting age of participant using personalty and state we are able to explain 0.18 of the age variabilty which indicated there exists some connection but not very strong.
