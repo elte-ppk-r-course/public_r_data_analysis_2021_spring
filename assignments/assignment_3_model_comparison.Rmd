@@ -60,6 +60,7 @@ Read the dataset used in this assignment. Pay attention to the extension of the 
 
 ```{r}
 
+
 ```
 
 ## Data and model diagnostics 
@@ -70,6 +71,7 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 
 ```{r}
 
+
 ```
 
 #### Correct coding errors
@@ -77,6 +79,7 @@ Run an exploratory data analysis (EDA) to investigate the dataset.
 If you find values in the dataset during the EDA, that are not correct based on the provided descriptions of the variables of the dataset please correct them here.
 
 ```{r}
+
 
 ```
 
@@ -87,6 +90,7 @@ In order to test the more complex model for outliers and to test the assumptions
 
 ```{r}
 
+
 ```
 
 #### Checking for influential outliers
@@ -94,6 +98,9 @@ In order to test the more complex model for outliers and to test the assumptions
 Check for outlier values in the model.
 
 ```{r}
+
+# Plot the Cook's Distance using the traditional 4/n criterion - based on: http://r-statistics.co/Outlier-Treatment-With-R.html
+
 
 ```
 
@@ -103,17 +110,22 @@ Check the normality assumption.
 
 ```{r}
 
+#We choose to use a stricter significance cireria of <0.01 (according to https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf)
+
 ```
 
 Check the linearity assumption.
 
 ```{r}
 
+  
 ```
 
 Check the homoscedasticty assumption (homogeneity of variance).
 
 ```{r}
+#We test significant heteroscdacity with NCV and BT tests based on https://github.com/kekecsz/PSYP14-Advanced-Scientific-Methods/blob/main/Exercise_11_Model_diagnostics/Exercise_11_Model_diagnostics.pdf
+
 
 ```
 
@@ -127,6 +139,7 @@ http://blog.minitab.com/blog/understanding-statistics/handling-multicollinearity
 
 ```{r}
 
+
 ```
 
 ### Making decision based on model diagnostics
@@ -135,11 +148,13 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 
 ```{r}
 
+
 ```
 
 #### Checking outliers of the updated model
 
 ```{r}
+
 
 ```
 
@@ -148,6 +163,7 @@ If based on the assumption tests you decide to drop a predictor variable you sho
 Normality assumption
 
 ```{r}
+
 
 ```
 
@@ -161,11 +177,13 @@ Homoscedasticty assumption (homogeneity of variance)
 
 ```{r}
 
+
 ```
 
 Multicollinearity assumption
 
 ```{r}
+
 
 ```
 
@@ -173,19 +191,45 @@ Multicollinearity assumption
 
 Create the simple model and get the results of the model that needs to be reported based on the What to report section.
 
+The model's test statistics are:
+Adjusted R-squared = 0.06712
+F-statistic = 5.713
+df = 2 and 129
+p value =  0.004195
+
+Based on the coefficients, we see that age (b = -0,072; p = 0.001) is a significant predictor of subjective feeling of pain around and after surgical procedures.
+
 ```{r}
+
 
 ```
 
 Create the more complex model based on the results of the model diagnostics. Also, get the results that needs to be reported based on the What to report section.
 
+The model's test statistics are:
+Adjusted R-squared = 0.4766
+F-statistic = 20.88
+df = 6 and 125
+p value < 2.2e-16
+
+The model's equation:
+Y = 0.7 - 0.026 * age + 0.24 * sex_male + 0.216 * STAI_trait + 0.8616 * pain_catastrophizing - 0.155 * mindfulness + 0.428 * cortisol_serum
+
+Based on the coefficients, we see that pain catastrophizing (b = 0.862; p = 0.0007) and cortisol measured from serum (b = 0.428; p = 0.0001) are significant predictors of subjective feeling of pain around and after surgical procedures.
+
 ```{r}
+
 
 ```
 
 Compare the two models.
 
+Compare the two models in terms of how much variance they explain of pain’s variability in the sample. Report Akaike information criterion (AIC) for both models and the F test statistic and p value of the likelihood ratio test comparing the two models.
+
 ```{r}
+
 
 ```
 
+Comparing the two models we see that the complex model is significantly better at explaining the variance (F = 26.226; p = 8.517e-16), than the simple model. 
+The complex model is also a better fit to the data based on the AIC-measueres (complex AIC = 360.418; simple AIC = 432.852) 

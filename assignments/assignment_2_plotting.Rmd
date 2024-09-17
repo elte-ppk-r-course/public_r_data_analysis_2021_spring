@@ -32,6 +32,7 @@ The 2020-09-22 TidyTueday datasets are about climbing expeditions. From the thre
 
 ```{r}
 
+
 ```
 
 ## Task 2: PhDs awarded
@@ -46,6 +47,7 @@ Notes:
 
 ```{r}
 
+
 ```
 
 ## Task 3: Commute in the US
@@ -59,5 +61,6 @@ Notes:
 -   The point size is 2, . The theme is set to light.
 
 ```{r}
+
 
 ```
